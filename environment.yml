@@ -1,0 +1,25 @@
+name: watermark_resolution
+channels:
+    - apple
+    - conda-forge
+dependencies:
+    - python<3.10
+    - pip>=19.0
+    - black
+    - flake9
+    - isort
+    - jupyter
+    - jupyterlab
+    - mypy
+    - pylint
+    - tensorflow-deps
+    - scikit-learn
+    - scipy
+    - pandas
+    - matplotlib
+    - tqdm
+    - requests
+    - rich
+    - pip:
+        - tensorflow-macos
+        - tensorflow-metal
