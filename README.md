@@ -1,0 +1,1 @@
+# Watermarking Adaptive to the Resolution of Image
