@@ -1,0 +1,1 @@
+from .watermark import DIMS_IMAGE, DIMS_MARK, MODEL_PATH, TEST_PATH, TRAIN_PATH
