@@ -166,6 +166,7 @@ class WaterMark:
     """
     Model for embedding mark in images
     """
+
     @staticmethod
     def build(image_dims: tuple, mark_dims: tuple, strength: float = 1):
         """
@@ -221,6 +222,7 @@ class ExtractWaterMark:
     """
     Model for extracting mark in images
     """
+
     @staticmethod
     def build(mark_dims: tuple):
         """

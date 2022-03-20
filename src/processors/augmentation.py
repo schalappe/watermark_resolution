@@ -218,31 +218,48 @@ def random_jpeg_quality(images: TensorLike) -> tf.Tensor:
     )
 
 
-def random_augmentation(images: tf.Tensor) -> tf.Tensor:
+def random_augmentation(
+    images: tf.Tensor, attack: str = "", percentage: float = 0.6
+) -> tf.Tensor:
     """
-    Apply random augmentation
+    Apply random augmentation if one is not specify
 
     Parameters
     ----------
     images: tf.Tensor
         Image to augment
+    attack: str
+        Attack to apply
+    percentage: float
+        Proportion on which to apply an attack
 
     Returns
     -------
     tf.Tensor:
         Augmented images
     """
-    augmentation = [
-        random_rotate,
-        random_dropout,
-        random_average_blur,
-        random_median_blur,
-        random_gaussian_noise,
-        random_salt_pepper,
-        random_jpeg_quality,
-    ]
+    try:
+        attack = attack.decode()
+    except AttributeError:
+        pass
 
-    func = choice(augmentation)
-    if tf.random.uniform([], 0, 1) > 0.6:
-        return func(images)
+    if attack == "none":
+        return images
+
+    augmentation = {
+        "rotation": random_rotate,
+        "dropout": random_dropout,
+        "average_blur": random_average_blur,
+        "median_blur": random_median_blur,
+        "gaussian_noise": random_gaussian_noise,
+        "salt_pepper": random_salt_pepper,
+        "image_quality": random_jpeg_quality,
+    }
+
+    if attack:
+        return augmentation[attack](images)
+
+    attacked = choice(list(augmentation))
+    if tf.random.uniform([], 0, 1) > percentage:
+        return augmentation[attacked](images)
     return images

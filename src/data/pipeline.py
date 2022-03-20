@@ -12,7 +12,11 @@ from src.processors import load_image, preprocess_input
 
 
 def prepare_data_from_slice(
-    inputs_path: str, extension: str, batch_size: int, training: bool = True
+    inputs_path: str,
+    extension: str,
+    batch_size: int,
+    image_dims: tuple,
+    training: bool = True,
 ) -> Tuple[tf.data.Dataset, int]:
     """
     Create a Dataset for training
@@ -25,6 +29,8 @@ def prepare_data_from_slice(
         Extension of images
     batch_size: int
         Batch size
+    image_dims: tuple
+        New dimension of images
     training: bool
         If training, shuffle data
 
@@ -48,7 +54,10 @@ def prepare_data_from_slice(
 
     # load image and preprocess
     dataset = dataset.map(
-        lambda image: preprocess_input(inputs=load_image(image), mode="tf"),
+        lambda image: preprocess_input(
+            load_image(image, image_dims[0], image_dims[1], extension.lower()),
+            mode="tf",
+        ),
         num_parallel_calls=tf.data.AUTOTUNE,
     )
 

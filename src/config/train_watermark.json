@@ -1,0 +1,24 @@
+{
+  "dimensions": {
+    "images": [128, 128, 1],
+    "mark": [8, 8, 1]
+  },
+  "hyperparemeters": {
+    "batch_size": 32,
+    "epochs": 25,
+    "learning_rate": {
+      "embedding": 1e-4,
+      "extraction": 1e-5
+    }
+  },
+  "loss_parameters": {
+    "embedding_mse": 45.0,
+    "embedding_mae": 0.2,
+    "extraction_mae": 20
+  },
+  "strength": 1.0,
+  "attack": {
+    "type": "none"
+  },
+  "image_format": "png"
+}
