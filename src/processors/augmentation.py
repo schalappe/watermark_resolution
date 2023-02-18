@@ -238,10 +238,6 @@ def random_augmentation(
     tf.Tensor:
         Augmented images
     """
-    try:
-        attack = attack.decode()
-    except AttributeError:
-        pass
 
     if attack == "none":
         return images
