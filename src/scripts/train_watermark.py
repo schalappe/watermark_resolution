@@ -172,7 +172,8 @@ def train(params: dict) -> None:
                 # Logging
                 if (step + 1) % 10 == 0:
                     progress.console.print(
-                        f"Step {step + 1} -> Embedding loss: {loss_embedding:.2f} - Extraction loss: {loss_extraction:.2f}"
+                        f"Step {step + 1} ->:"
+                        f" Embedding loss: {loss_embedding:.2f} - Extraction loss: {loss_extraction:.2f}"
                     )
                 progress.advance(train_bar)
 
