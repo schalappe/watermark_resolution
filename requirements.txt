@@ -1,1 +1,5 @@
+loguru>=0.7
+python-dotenv>=1.0
+requests>=2.31
+rich>=13.6
 tensorflow>=2.15,<2.16
