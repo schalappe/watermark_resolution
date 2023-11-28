@@ -7,7 +7,8 @@ import tensorflow as tf
 
 def preprocess_input(inputs: tf.Tensor, mode: str) -> tf.Tensor:
     """
-    Preprocesses a tensor encoding a batch of images (Normalization)
+    Preprocesses a tensor encoding a batch of images (Normalization).
+
     Parameters
     ----------
     inputs: tf.Tensor
