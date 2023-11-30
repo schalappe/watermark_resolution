@@ -1,71 +1,66 @@
 # -*- coding: utf-8 -*-
 """
-Set of function for input pipeline
+Set of functions for input pipeline.
 """
-from glob import glob
-from os.path import join
-from typing import Tuple
+from typing import Tuple, Sequence
 
 import tensorflow as tf
 
-from src.processors import load_image, preprocess_input
+from src.addons.augmenters.augment import augment
+from src.addons.images.load import load_image
 
 
-def prepare_data_from_slice(
-    inputs_path: str,
-    extension: str,
-    batch_size: int,
-    image_dims: tuple,
-    training: bool = True,
-) -> Tuple[tf.data.Dataset, int]:
+def train_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> tf.data.Dataset:
     """
-    Create a Dataset for training
+    Create data pipeline for training.
 
     Parameters
     ----------
-    inputs_path: str
-        Path of images for training
-    extension: str
-        Extension of images
-    batch_size: int
-        Batch size
-    image_dims: tuple
-        New dimension of images
-    training: bool
-        If training, shuffle data
+    paths : Sequence[str]
+        List of image path.
+    batch : int
+        Batch size.
+    dims : Tuple[int, int]
+        Height and width of image use for training.
 
     Returns
     -------
-        Dataset and len of dataset
+    tf.data.Dataset
+        Pipeline for training.
     """
-    # check image extension
-    if extension.lower() not in ["png", "jpeg", "jpg", "gif"]:
-        raise NotImplementedError
-
-    # load images path
-    image_paths = glob(join(inputs_path, "*." + extension))
-
-    # build the dataset and data input pipeline
-    dataset = tf.data.Dataset.from_tensor_slices(image_paths)
-
-    # shuffle data
-    if training:
-        dataset = dataset.shuffle(1024)
-
-    # load image and preprocess
-    dataset = dataset.map(
-        lambda image: preprocess_input(
-            load_image(image, image_dims[0], image_dims[1], extension.lower()),
-            mode="tf",
-        ),
-        num_parallel_calls=tf.data.AUTOTUNE,
+    return (
+        tf.data.Dataset.from_tensor_slices(paths)
+        .shuffle(1024, seed=1335)
+        .map(lambda path: load_image(path, height=dims[0], width=dims[0]), num_parallel_calls=tf.data.AUTOTUNE)
+        .cache()
+        .batch(batch_size=batch)
+        .map(lambda image: tf.py_function(augment, [image], [tf.float32])[0], num_parallel_calls=tf.data.AUTOTUNE)
+        .prefetch(buffer_size=tf.data.AUTOTUNE)
     )
 
-    # cache
-    dataset = dataset.cache()
 
-    # Batch all datasets
-    dataset = dataset.batch(batch_size)
+def test_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> tf.data.Dataset:
+    """
+    Create data pipeline for evaluation.
 
-    # Use buffered prefetching on all datasets
-    return dataset.prefetch(buffer_size=tf.data.AUTOTUNE), len(image_paths)
+    Parameters
+    ----------
+    paths : Sequence[str]
+        List of image path.
+    batch : int
+        Batch size.
+    dims : Tuple[int, int]
+        Height and width of image use for evaluation.
+
+    Returns
+    -------
+    tf.data.Dataset
+        Pipeline for evaluation.
+    """
+    return (
+        tf.data.Dataset.from_tensor_slices(paths)
+        .map(lambda path: load_image(path, height=dims[0], width=dims[0]), num_parallel_calls=tf.data.AUTOTUNE)
+        .cache()
+        .batch(batch_size=batch)
+        .prefetch(buffer_size=tf.data.AUTOTUNE)
+    )

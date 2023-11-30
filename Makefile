@@ -1,15 +1,19 @@
 export PYTHONPATH=$(shell pwd)
 
-VIRTUAL_ENV=venv
+VIRTUAL_ENV=$(shell pwd)/venv
 PYTHON=${VIRTUAL_ENV}/bin/python
+JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
 PIP=${VIRTUAL_ENV}/bin/pip
 
-.PHONY: get_data
+.PHONY: get_data notebook
 .ONESHELL: get_data
 
 create_virtualenv: requirements.txt
 	python3 -m venv $(VIRTUAL_ENV)
 	$(PIP) install -r requirements.txt
+
+notebook:
+	cd notebooks/ && $(JUPYTER) --port=8080
 
 get_data:
 	rm -rf .env
