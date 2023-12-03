@@ -2,11 +2,24 @@
 """
 Set of functions for data augmentation.
 """
-from imgaug.augmenters import RandAugment
 import tensorflow as tf
-from src.addons.augmenters.attacks import attacks
+from src.addons.augmenters.base import (
+    random_hue,
+    random_flip,
+    random_saturation,
+    random_brightness,
+    random_contrast,
+    random_rotate,
+    random_dropout,
+    random_average_blur,
+    random_median_blur,
+    random_salt_pepper,
+    random_gaussian_noise,
+    random_jpeg_quality,
+)
 
 
+@tf.py_function(Tout=tf.float32)
 def augment(images: tf.Tensor) -> tf.Tensor:
     """
     Take an image and apply random data augmentation.
@@ -14,32 +27,28 @@ def augment(images: tf.Tensor) -> tf.Tensor:
     Parameters
     ----------
     images : tf.Tensor
-         A tensor represented many image.
+         A tensor represented an image.
 
     Returns
     -------
     tf.Tensor
-        Augmented images.
+        Augmented image.
     """
-    return RandAugment(n=2, m=15)(images=tf.cast(images, tf.uint8).numpy())
+    augmentation = [random_flip, random_hue, random_saturation, random_brightness, random_contrast]
+
+    for func in augmentation:
+        if tf.random.uniform([], 0, 1) > 0.25:
+            images = func(images)
+
+    return images
 
 
-def apply_attacks(images: tf.Tensor, attack: str) -> tf.Tensor:
-    """
-    Apply a specific modification on image to deteriorate it.
-
-    Parameters
-    ----------
-    images : tf.Tensor
-         A tensor represented many image.
-    attack : str
-        Modification to apply.
-
-    Returns
-    -------
-    tf.Tensor
-        Deteriorated images.
-    """
-    if attack == "":
-        return images
-    return attacks[attack](images)
+attacks = {
+    "rotation": random_rotate,
+    "dropout": random_dropout,
+    "average_blur": random_average_blur,
+    "median_blur": random_median_blur,
+    "gaussian_noise": random_gaussian_noise,
+    "salt_pepper": random_salt_pepper,
+    "image_quality": random_jpeg_quality,
+}

@@ -1,20 +1,119 @@
 # -*- coding: utf-8 -*-
 """
-Set of functions for modifying data.
+Set of functions to modify an image.
 """
-from random import choice
-
-import tensorflow as tf
 from imgaug.augmenters import (
+    Fliplr,
+    Flipud,
+    AddToHue,
+    AddToSaturation,
+    AddToBrightness,
+    GammaContrast,
     AdditiveGaussianNoise,
     AverageBlur,
     Dropout,
     MedianBlur,
     Rotate,
     SaltAndPepper,
+    JpegCompression,
 )
+from random import choice
+import tensorflow as tf
 
 
+@tf.py_function(Tout=tf.float32)
+def random_flip(images: tf.Tensor) -> tf.Tensor:
+    """
+    Apply random flip to images.
+
+    Parameters
+    ----------
+    images : tf.Tensor
+         A tensor represented many images.
+
+    Returns
+    -------
+    tf.Tensor
+        Flipped images.
+    """
+    aug_image = Fliplr(0.5)(images=tf.cast(images, tf.uint8).numpy())
+    aug_image = Flipud(0.5)(images=tf.cast(aug_image, tf.uint8).numpy())
+    return aug_image
+
+
+@tf.py_function(Tout=tf.float32)
+def random_hue(images: tf.Tensor) -> tf.Tensor:
+    """
+    Apply random hue to images.
+
+    Parameters
+    ----------
+    images : tf.Tensor
+         A tensor represented many images.
+
+    Returns
+    -------
+    tf.Tensor
+        Augmented images.
+    """
+    return AddToHue([-50, 50])(images=tf.cast(images, tf.uint8).numpy())
+
+
+@tf.py_function(Tout=tf.float32)
+def random_saturation(images: tf.Tensor) -> tf.Tensor:
+    """
+    Apply random hue to images.
+
+    Parameters
+    ----------
+    images : tf.Tensor
+         A tensor represented many images.
+
+    Returns
+    -------
+    tf.Tensor
+        Augmented images.
+    """
+    return AddToSaturation((-50, 50))(images=tf.cast(images, tf.uint8).numpy())
+
+
+@tf.py_function(Tout=tf.float32)
+def random_brightness(images: tf.Tensor) -> tf.Tensor:
+    """
+    Apply random hue to images.
+
+    Parameters
+    ----------
+    images : tf.Tensor
+         A tensor represented many images.
+
+    Returns
+    -------
+    tf.Tensor
+        Augmented images.
+    """
+    return AddToBrightness((-30, 30))(images=tf.cast(images, tf.uint8).numpy())
+
+
+@tf.py_function(Tout=tf.float32)
+def random_contrast(images: tf.Tensor) -> tf.Tensor:
+    """
+    Apply random contrast to images.
+
+    Parameters
+    ----------
+    images : tf.Tensor
+         A tensor represented many images.
+
+    Returns
+    -------
+    tf.Tensor
+        Augmented images.
+    """
+    return GammaContrast((0.5, 2.0))(images=tf.cast(images, tf.uint8).numpy())
+
+
+@tf.py_function(Tout=tf.float32)
 def random_rotate(images: tf.Tensor) -> tf.Tensor:
     """
     Apply random rotation.
@@ -33,6 +132,7 @@ def random_rotate(images: tf.Tensor) -> tf.Tensor:
     return Rotate(rotate=angle)(images=tf.cast(images, tf.uint8).numpy())
 
 
+@tf.py_function(Tout=tf.float32)
 def random_dropout(images: tf.Tensor) -> tf.Tensor:
     """
     Apply random dropout.
@@ -51,6 +151,7 @@ def random_dropout(images: tf.Tensor) -> tf.Tensor:
     return Dropout(p=value)(images=tf.cast(images, tf.uint8).numpy())
 
 
+@tf.py_function(Tout=tf.float32)
 def random_average_blur(images: tf.Tensor) -> tf.Tensor:
     """
     Apply random average blur.
@@ -69,6 +170,7 @@ def random_average_blur(images: tf.Tensor) -> tf.Tensor:
     return AverageBlur(k=kernel)(images=tf.cast(images, tf.uint8).numpy())
 
 
+@tf.py_function(Tout=tf.float32)
 def random_median_blur(images: tf.Tensor) -> tf.Tensor:
     """
     Apply random dropout.
@@ -87,6 +189,7 @@ def random_median_blur(images: tf.Tensor) -> tf.Tensor:
     return MedianBlur(k=kernel)(images=tf.cast(images, tf.uint8).numpy())
 
 
+@tf.py_function(Tout=tf.float32)
 def random_gaussian_noise(images: tf.Tensor) -> tf.Tensor:
     """
     Apply random gaussian noise.
@@ -105,6 +208,7 @@ def random_gaussian_noise(images: tf.Tensor) -> tf.Tensor:
     return AdditiveGaussianNoise(scale=sigma * 225)(images=tf.cast(images, tf.uint8).numpy())
 
 
+@tf.py_function(Tout=tf.float32)
 def random_salt_pepper(images: tf.Tensor) -> tf.Tensor:
     """
     Apply random gaussian noise.
@@ -123,6 +227,7 @@ def random_salt_pepper(images: tf.Tensor) -> tf.Tensor:
     return SaltAndPepper(p=value)(images=tf.cast(images, tf.uint8).numpy())
 
 
+@tf.py_function(Tout=tf.float32)
 def random_jpeg_quality(images: tf.Tensor) -> tf.Tensor:
     """
     Randomly reduce JPEG quality.
@@ -139,22 +244,4 @@ def random_jpeg_quality(images: tf.Tensor) -> tf.Tensor:
     """
     # value of rotation
     value = choice([50, 70, 90])
-
-    if len(images.shape) == 3:
-        return tf.image.random_jpeg_quality(images, value - 1, value)
-
-    return tf.map_fn(
-        fn=lambda image: tf.image.random_jpeg_quality(image, value - 1, value),
-        elems=images,
-    )
-
-
-attacks = {
-    "rotation": random_rotate,
-    "dropout": random_dropout,
-    "average_blur": random_average_blur,
-    "median_blur": random_median_blur,
-    "gaussian_noise": random_gaussian_noise,
-    "salt_pepper": random_salt_pepper,
-    "image_quality": random_jpeg_quality,
-}
+    return JpegCompression(compression=value)(images=tf.cast(images, tf.uint8).numpy())

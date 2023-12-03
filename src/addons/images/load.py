@@ -5,7 +5,7 @@ Set of function for read and decode image.
 import tensorflow as tf
 
 
-def load_image(image_path: str, height: int, width: int) -> tf.Tensor:
+def load_image(image_path: str) -> tf.Tensor:
     """
     Load an image as tensor.
 
@@ -13,19 +13,13 @@ def load_image(image_path: str, height: int, width: int) -> tf.Tensor:
     ----------
     image_path : str
         path of image
-    height : int
-        New height of image
-    width : int
-        New width of images
 
     Returns
     ------
     tf.Tensor
         Image as tensor
     """
-    image = tf.image.decode_image(tf.io.read_file(image_path))
-    if tf.shape(image)[-1] == 1:
-        image = tf.image.grayscale_to_rgb(image)
-
-    image = tf.image.resize(image, [height, width])
+    image = tf.image.decode_jpeg(tf.io.read_file(image_path), channels=3)
+    # image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    image = tf.image.resize(image, (512, 512))
     return image

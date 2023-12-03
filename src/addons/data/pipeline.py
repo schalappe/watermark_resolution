@@ -2,15 +2,15 @@
 """
 Set of functions for input pipeline.
 """
-from typing import Tuple, Sequence
+from typing import Sequence, Optional
 
 import tensorflow as tf
 
-from src.addons.augmenters.augment import augment
+from src.addons.augmenters.augment import augment, attacks
 from src.addons.images.load import load_image
 
 
-def train_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> tf.data.Dataset:
+def train_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
     """
     Create data pipeline for training.
 
@@ -20,8 +20,6 @@ def train_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> t
         List of image path.
     batch : int
         Batch size.
-    dims : Tuple[int, int]
-        Height and width of image use for training.
 
     Returns
     -------
@@ -31,15 +29,16 @@ def train_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> t
     return (
         tf.data.Dataset.from_tensor_slices(paths)
         .shuffle(1024, seed=1335)
-        .map(lambda path: load_image(path, height=dims[0], width=dims[0]), num_parallel_calls=tf.data.AUTOTUNE)
+        .map(load_image, num_parallel_calls=tf.data.AUTOTUNE)
         .cache()
         .batch(batch_size=batch)
-        .map(lambda image: tf.py_function(augment, [image], [tf.float32])[0], num_parallel_calls=tf.data.AUTOTUNE)
+        .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
+        .map(lambda image: image / 255.0, num_parallel_calls=tf.data.AUTOTUNE)
         .prefetch(buffer_size=tf.data.AUTOTUNE)
     )
 
 
-def test_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> tf.data.Dataset:
+def test_pipeline(paths: Sequence[str], batch: int, attack: Optional[str] = None) -> tf.data.Dataset:
     """
     Create data pipeline for evaluation.
 
@@ -49,18 +48,23 @@ def test_pipeline(paths: Sequence[str], batch: int, dims: Tuple[int, int]) -> tf
         List of image path.
     batch : int
         Batch size.
-    dims : Tuple[int, int]
-        Height and width of image use for evaluation.
+    attack : str, default=None
+        Type of attack to apply on image.
 
     Returns
     -------
     tf.data.Dataset
         Pipeline for evaluation.
     """
-    return (
+    dataset = (
         tf.data.Dataset.from_tensor_slices(paths)
-        .map(lambda path: load_image(path, height=dims[0], width=dims[0]), num_parallel_calls=tf.data.AUTOTUNE)
-        .cache()
+        .map(load_image, num_parallel_calls=tf.data.AUTOTUNE)
         .batch(batch_size=batch)
-        .prefetch(buffer_size=tf.data.AUTOTUNE)
+        .cache()
+    )
+    if attack:
+        dataset = dataset.map(attacks[attack], num_parallel_calls=tf.data.AUTOTUNE)
+
+    return dataset.map(lambda image: image / 255.0, num_parallel_calls=tf.data.AUTOTUNE).prefetch(
+        buffer_size=tf.data.AUTOTUNE
     )
