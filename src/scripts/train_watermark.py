@@ -9,7 +9,7 @@ from rich.progress import Progress
 
 from src.addons.images import random_binary_images
 from src.addons.losses import WatermarkLoss
-from src.addons.metrics import BER, PSNR
+from src.addons.metrics import BitErrorRatio, PeakSignalNoiseRatio
 from src.config import MODEL_PATH, TEST_PATH, TRAIN_PATH
 from src.data import prepare_data_from_slice
 from src.model import ExtractWaterMark, WaterMark
@@ -66,11 +66,11 @@ def train(params: dict) -> None:
 
     # Instantiate a metric function.
     print("\n[INFO]: Instantiate a metric function ...")
-    psnr_train = PSNR()
-    psnr_test = PSNR()
+    psnr_train = PeakSignalNoiseRatio()
+    psnr_test = PeakSignalNoiseRatio()
 
-    ber_train = BER()
-    ber_test = BER()
+    ber_train = BitErrorRatio()
+    ber_test = BitErrorRatio()
 
     # ############ FUNCTION #############
 
@@ -78,9 +78,7 @@ def train(params: dict) -> None:
     def train_step(images: tf.Tensor):
         # Random binary images
         batch_size = tf.shape(images)[0]
-        marks = random_binary_images(
-            batch_size=batch_size, shape=params["dimensions"]["mark"][0]
-        )
+        marks = random_binary_images(batch_size=batch_size, shape=params["dimensions"]["mark"][0])
 
         with tf.GradientTape() as embedding_tape, tf.GradientTape() as extraction_tape:
             # embedding and marks
@@ -99,25 +97,15 @@ def train(params: dict) -> None:
             )
 
             # calculates loss
-            loss_embedding, loss_extraction = loss_fn(
-                images, marks, embeddings, extracted_marks
-            )
+            loss_embedding, loss_extraction = loss_fn(images, marks, embeddings, extracted_marks)
 
         # computes gradient
-        grads_embedding = embedding_tape.gradient(
-            loss_embedding, embedding_model.trainable_weights
-        )
-        grads_extraction = extraction_tape.gradient(
-            loss_extraction, extraction_model.trainable_weights
-        )
+        grads_embedding = embedding_tape.gradient(loss_embedding, embedding_model.trainable_weights)
+        grads_extraction = extraction_tape.gradient(loss_extraction, extraction_model.trainable_weights)
 
         # train extraction model
-        embedding_optimizer.apply_gradients(
-            zip(grads_embedding, embedding_model.trainable_weights)
-        )
-        extraction_optimizer.apply_gradients(
-            zip(grads_extraction, extraction_model.trainable_weights)
-        )
+        embedding_optimizer.apply_gradients(zip(grads_embedding, embedding_model.trainable_weights))
+        extraction_optimizer.apply_gradients(zip(grads_extraction, extraction_model.trainable_weights))
 
         # update metrics
         psnr_train.update_state(
@@ -131,15 +119,11 @@ def train(params: dict) -> None:
     def test_step(images: tf.Tensor):
         # Random binary images
         batch_size = tf.shape(images)[0]
-        marks = random_binary_images(
-            batch_size=batch_size, shape=params["dimensions"]["mark"][0]
-        )
+        marks = random_binary_images(batch_size=batch_size, shape=params["dimensions"]["mark"][0])
 
         # embedding and marks
         embeddings = embedding_model([images, marks], training=False)
-        extracted_marks = extraction_model(
-            preprocess_output(embeddings, mode="tf"), training=False
-        )
+        extracted_marks = extraction_model(preprocess_output(embeddings, mode="tf"), training=False)
 
         # update metrics
         psnr_test.update_state(
@@ -178,37 +162,29 @@ def train(params: dict) -> None:
                 progress.advance(train_bar)
 
         # Display metrics at the end of each epoch.
-        print(
-            f"Training -> PSNR: {float(psnr_train.result()):.4f} - BER: {float(ber_train.result()):.4f}"
-        )
+        print(f"Training -> PSNR: {float(psnr_train.result()):.4f} - BER: {float(ber_train.result()):.4f}")
 
         # Run a validation loop at the end of each epoch.
         for real_images in test_set:
             test_step(real_images)
 
         # Display metrics.
-        print(
-            f"Testing -> PSNR: {float(psnr_test.result()):.4f} - BER: {float(ber_test.result()):.4f}"
-        )
+        print(f"Testing -> PSNR: {float(psnr_test.result()):.4f} - BER: {float(ber_test.result()):.4f}")
 
     # ############ STORE #############
 
     if params.get("storage_name", False):
         print("\n[INFO] Save model ...")
         embedding_model.compile(
-            optimizer=embedding_optimizer, loss=loss_fn, metrics=[PSNR(), BER()]
+            optimizer=embedding_optimizer, loss=loss_fn, metrics=[PeakSignalNoiseRatio(), BitErrorRatio()]
         )
 
-        embedding_model.save(
-            join(MODEL_PATH, f"embedding_model_{params['storage_name']}.h5")
-        )
+        embedding_model.save(join(MODEL_PATH, f"embedding_model_{params['storage_name']}.h5"))
 
         extraction_model.compile(
-            optimizer=extraction_optimizer, loss=loss_fn, metrics=[PSNR(), BER()]
+            optimizer=extraction_optimizer, loss=loss_fn, metrics=[PeakSignalNoiseRatio(), BitErrorRatio()]
         )
-        extraction_model.save(
-            join(MODEL_PATH, f"extraction_model_{params['storage_name']}.h5")
-        )
+        extraction_model.save(join(MODEL_PATH, f"extraction_model_{params['storage_name']}.h5"))
 
 
 if __name__ == "__main__":
@@ -217,9 +193,7 @@ if __name__ == "__main__":
 
     # Parse arguments
     parser = ArgumentParser()
-    parser.add_argument(
-        "--config", help="JSON configuration file path", type=str, required=True
-    )
+    parser.add_argument("--config", help="JSON configuration file path", type=str, required=True)
     parser.add_argument("--name", help="Model name to store", type=str)
     args = parser.parse_args()
 

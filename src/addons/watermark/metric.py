@@ -1,22 +1,25 @@
 # -*- coding: utf-8
 """
-    Custom metrics
+Custom metrics
 """
 import tensorflow as tf
+import keras
 
 
 def peak_signal_noise_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     """
-    Computes the peak signal-to-noise ratio (PSNR)
+    Computes the peak signal-to-noise ratio (PSNR).
+
     Parameters
     ----------
-    y_true: tf.Tensor
-        Ground truth values
-    y_pred: tf.Tensor
-        The predicted values
+    y_true : tf.Tensor
+        Ground truth values.
+    y_pred : tf.Tensor
+        The predicted values.
 
     Returns
     -------
+    tf.Tensor
         Peak signal-to-noise ratio value
     """
     y_true = tf.cast(y_true, tf.float32)
@@ -31,12 +34,13 @@ def peak_signal_noise_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
 
 def bit_error_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     """
-    Compute the bit error ratio (BER)
+    Compute the bit error ratio (BER).
+
     Parameters
     ----------
-    y_true: tf.Tensor
+    y_true : tf.Tensor
         Ground truth values
-    y_pred: tf.Tensor
+    y_pred : tf.Tensor
         The predicted values
 
     Returns
@@ -45,23 +49,21 @@ def bit_error_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     """
     y_true = tf.cast(y_true, tf.int32)
     y_pred = tf.cast(y_pred, tf.int32)
-    return tf.reduce_mean(
-        tf.cast(tf.math.equal(y_true, y_pred), tf.float32), axis=[-3, -2, -1]
-    )
+    return tf.reduce_mean(tf.cast(tf.math.equal(y_true, y_pred), tf.float32), axis=[-3, -2, -1])
 
 
-class PSNR(tf.keras.metrics.MeanMetricWrapper):
+class PeakSignalNoiseRatio(keras.metrics.MeanMetricWrapper):
     """
-    Calculates the peak signal-to-noise ratio
+    Calculates the peak signal-to-noise ratio.
     """
 
     def __init__(self, name="peak_signal_to_noise_ratio", dtype=None):
         super().__init__(peak_signal_noise_ratio, name, dtype=dtype)
 
 
-class BER(tf.keras.metrics.MeanMetricWrapper):
+class BitErrorRatio(keras.metrics.MeanMetricWrapper):
     """
-    Calculates the bit error ratio
+    Calculates the bit error ratio.
     """
 
     def __init__(self, name="bit_error_ratio", dtype=None):
