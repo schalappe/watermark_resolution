@@ -275,3 +275,21 @@ def random_jpeg_quality(images: tf.Tensor) -> tf.Tensor:
     """
     # value of rotation
     return JpegCompression(compression=50)(images=tf.cast(images, tf.uint8).numpy())
+
+
+@tf.py_function(Tout=tf.float32)
+def identity(images: tf.Tensor) -> tf.Tensor:
+    """
+    Do nothing.
+
+    Parameters
+    ----------
+    images: tf.Tensor
+        A tensor represented an image.
+
+    Returns
+    -------
+    tf.Tensor
+        A tensor represented an image.
+    """
+    return images

@@ -3,6 +3,7 @@
 Set of functions for data augmentation.
 """
 import tensorflow as tf
+from random import choices
 from src.addons.augmenters.base import (
     random_hue,
     random_flip,
@@ -18,10 +19,12 @@ from src.addons.augmenters.base import (
     random_gaussian_noise,
     random_jpeg_quality,
     random_crop,
+    identity,
 )
+from typing import Callable
 
 
-@tf.py_function(Tout=tf.float32)
+@tf.py_function(Tout=tf.uint8)
 def augment(images: tf.Tensor) -> tf.Tensor:
     """
     Take an image and apply random data augmentation.
@@ -42,17 +45,44 @@ def augment(images: tf.Tensor) -> tf.Tensor:
         if tf.random.uniform([], 0, 1) > 0.25:
             images = func(images)
 
-    return images
+    return tf.cast(images, tf.uint8)
 
 
 attacks = {
-    "rotation": random_rotate,
-    "dropout": random_dropout,
     "crop": random_crop,
-    "gaussian_blur": random_gaussian_blur,
-    "average_blur": random_average_blur,
-    "median_blur": random_median_blur,
-    "gaussian_noise": random_gaussian_noise,
+    "dropout": random_dropout,
+    "identity": identity,
+    "rotation": random_rotate,
     "salt_pepper": random_salt_pepper,
+    "median_blur": random_median_blur,
+    "average_blur": random_average_blur,
+    "gaussian_blur": random_gaussian_blur,
     "image_quality": random_jpeg_quality,
+    "gaussian_noise": random_gaussian_noise,
 }
+
+attack_probs = {
+    "crop": 1,
+    "dropout": 1,
+    "identity": 1,
+    "rotation": 1,
+    "salt_pepper": 1,
+    "median_blur": 1,
+    "average_blur": 2,
+    "gaussian_blur": 2,
+    "image_quality": 1,
+    "gaussian_noise": 1,
+}
+
+
+def random_attacks() -> Callable:
+    """
+    Randomly choose an attack function.
+
+    Returns
+    -------
+    Callable
+        Chosen attack function.
+    """
+    attack = choices(list(attack_probs.keys()), weights=list(attack_probs.values()), k=1)
+    return attacks[attack]

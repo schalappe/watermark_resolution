@@ -33,7 +33,6 @@ def train_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
         .cache()
         .batch(batch_size=batch)
         .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
-        .map(lambda image: image / 255.0, num_parallel_calls=tf.data.AUTOTUNE)
         .prefetch(buffer_size=tf.data.AUTOTUNE)
     )
 
@@ -48,21 +47,16 @@ def test_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
         List of image path.
     batch : int
         Batch size.
-    attack : str, default=None
-        Type of attack to apply on image.
 
     Returns
     -------
     tf.data.Dataset
         Pipeline for evaluation.
     """
-    dataset = (
+    return (
         tf.data.Dataset.from_tensor_slices(paths)
         .map(load_image, num_parallel_calls=tf.data.AUTOTUNE)
         .batch(batch_size=batch)
         .cache()
-    )
-
-    return dataset.map(lambda image: image / 255.0, num_parallel_calls=tf.data.AUTOTUNE).prefetch(
-        buffer_size=tf.data.AUTOTUNE
+        .prefetch(buffer_size=tf.data.AUTOTUNE)
     )

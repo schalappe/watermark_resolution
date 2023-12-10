@@ -30,22 +30,22 @@ class XORScrambleLayer(keras.layers.Layer):
         tf.Tensor
             Scrambled data.
         """
-        flatten_data = tf.cast(tf.reshape(inputs, (-1, 1)), tf.int32)
+        flatten_data = tf.cast(tf.reshape(inputs, (-1, 1)), tf.uint8)
 
-        key_tensor = tf.constant(int(self.key, 2), dtype=tf.int32)
+        key_tensor = tf.constant(int(self.key, 2), dtype=tf.uint8)
         scrambled_data = tf.bitwise.bitwise_xor(flatten_data, key_tensor)
         scrambled_data = tf.cast(tf.reshape(scrambled_data, tf.shape(inputs)), inputs.dtype)
 
         return scrambled_data
 
 
-class NormalizationLayer(keras.layers.Layer):
+class Descaling(keras.layers.Layer):
     """
     De-normalization layer.
     """
 
     def __init__(self, scale, offset, **kwargs):
-        super(NormalizationLayer, self).__init__(**kwargs)
+        super(Descaling, self).__init__(**kwargs)
         self.scale = scale
         self.offset = offset
 

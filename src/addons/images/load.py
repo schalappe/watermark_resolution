@@ -20,6 +20,5 @@ def load_image(image_path: str) -> tf.Tensor:
         Image as tensor
     """
     image = tf.image.decode_jpeg(tf.io.read_file(image_path), channels=3)
-    # image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-    image = tf.image.resize(image, (512, 512))
+    image = tf.cast(tf.image.resize(image, (512, 512)), tf.uint8)
     return image
