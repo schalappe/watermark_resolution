@@ -1,6 +1,6 @@
 # -*- coding: utf-8
 """
-    Network and subnetwork for watermark
+Network and subnetwork for watermark.
 """
 import tensorflow as tf
 import keras

@@ -2,11 +2,11 @@
 """
 Set of functions for input pipeline.
 """
-from typing import Sequence, Optional
+from typing import Sequence
 
 import tensorflow as tf
 
-from src.addons.augmenters.augment import augment, attacks
+from src.addons.augmenters.augment import augment
 from src.addons.images.load import load_image
 
 
@@ -38,7 +38,7 @@ def train_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
     )
 
 
-def test_pipeline(paths: Sequence[str], batch: int, attack: Optional[str] = None) -> tf.data.Dataset:
+def test_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
     """
     Create data pipeline for evaluation.
 
@@ -62,8 +62,6 @@ def test_pipeline(paths: Sequence[str], batch: int, attack: Optional[str] = None
         .batch(batch_size=batch)
         .cache()
     )
-    if attack:
-        dataset = dataset.map(attacks[attack], num_parallel_calls=tf.data.AUTOTUNE)
 
     return dataset.map(lambda image: image / 255.0, num_parallel_calls=tf.data.AUTOTUNE).prefetch(
         buffer_size=tf.data.AUTOTUNE

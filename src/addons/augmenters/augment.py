@@ -12,10 +12,12 @@ from src.addons.augmenters.base import (
     random_rotate,
     random_dropout,
     random_average_blur,
+    random_gaussian_blur,
     random_median_blur,
     random_salt_pepper,
     random_gaussian_noise,
     random_jpeg_quality,
+    random_crop,
 )
 
 
@@ -46,6 +48,8 @@ def augment(images: tf.Tensor) -> tf.Tensor:
 attacks = {
     "rotation": random_rotate,
     "dropout": random_dropout,
+    "crop": random_crop,
+    "gaussian_blur": random_gaussian_blur,
     "average_blur": random_average_blur,
     "median_blur": random_median_blur,
     "gaussian_noise": random_gaussian_noise,
