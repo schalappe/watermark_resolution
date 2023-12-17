@@ -23,5 +23,5 @@ def random_mark(batch_size: int, shape: int) -> tf.Tensor:
     """
     return tf.cast(
         tf.random.uniform(shape=(batch_size, shape, shape, 1), minval=0, maxval=2, dtype=tf.int32),
-        tf.uint8,
+        tf.float32,
     )

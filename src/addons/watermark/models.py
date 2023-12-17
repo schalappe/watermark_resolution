@@ -128,7 +128,7 @@ def stack_post_processing(inputs: Tuple[keras.layers.Layer, keras.layers.Layer])
 
     output = CombineYCbCrLayer()((y_component, chroma_component))
     output = YCbCrtoRGBLayer()(output)
-    output = tf.cast(Descaling(scale=1.0 / 255, offset=0.0)(output), tf.uint8)
+    output = Descaling(scale=1.0 / 255, offset=0.0)(output)
 
     return output
 
@@ -196,80 +196,7 @@ def create_extract_mark(image_dims: Tuple[int, int, int]) -> keras.Model:
 
     # ##: De-normalization and de-scrambling.
     outputs = Descaling(scale=1.0 / 127.5, offset=-1.0)(outputs)
-    outputs = tf.cast(outputs, tf.uint8)
     outputs = XORScrambleLayer(key="110110")(outputs)
 
     # ##: return model.
     return keras.Model(inputs=input_image, outputs=outputs)
-
-
-class WatermarkModel(keras.Model):
-    """
-    Model for embedding mark in images
-    """
-
-    def __init__(self, image_dims: Tuple[int, int, int], mark_dims: Tuple[int, int, int], strength: float = 1):
-        super().__init__()
-        self.watermark = create_watermark(image_dims=image_dims, mark_dims=mark_dims, strength=strength)
-        self.extract_mark = create_extract_mark(image_dims=image_dims)
-        self.loss_embedding_tracker = keras.metrics.Mean(name="loss_embedding")
-        self.loss_extract_tracker = keras.metrics.Mean(name="loss_extract")
-        self.psnr_tracker = PeakSignalNoiseRatio()
-        self.ber_tracker = BitErrorRatio()
-
-    @property
-    def metrics(self) -> List[keras.metrics.Metric]:
-        """
-        Return metrics.
-
-        Returns
-        -------
-        List[keras.metrics.Metric]
-            List of metrics.
-        """
-        return [self.loss_embedding_tracker, self.loss_extract_tracker, self.psnr_tracker, self.ber_tracker]
-
-    def train_step(self, data: Tuple[tf.Tensor, tf.Tensor]) -> Dict[str, Any]:
-        """
-        Train method.
-
-        Parameters
-        ----------
-        data
-            One batch of data to be given to the loss function.
-
-        Returns
-        -------
-        Dict[str, Any]
-            Returns a dictionary with the loss metric.
-        """
-        images, marks = data
-
-        with tf.GradientTape() as embedding_tape, tf.GradientTape() as extraction_tape:
-            # ##: Embedding and marks.
-            outputs = self.watermark([images, marks], training=True)
-            attack_outputs = tf.cast(random_attacks()(outputs), tf.uint8)
-            extracted_marks = self.extract_mark(attack_outputs, training=True)
-
-            # ##: Calculates loss.
-            loss_embedding, loss_extraction = self.loss([images, marks], [outputs, extracted_marks])
-
-        # ##: computes gradient.
-        grads_embedding = embedding_tape.gradient(loss_embedding, self.watermark.trainable_weights)
-        grads_extraction = extraction_tape.gradient(loss_extraction, self.extract_mark.trainable_weights)
-
-        # ##: train extraction model.
-        self.optimizer.apply_gradients(zip(grads_embedding, self.watermark.trainable_weights))
-        self.optimizer.apply_gradients(zip(grads_extraction, self.extract_mark.trainable_weights))
-
-        # ##. update metrics
-        self.loss_embedding_tracker.update_state(loss_embedding)
-        self.loss_extract_tracker.update_state(loss_extraction)
-        self.psnr_tracker.update_state(images, outputs)
-        self.ber_tracker.update_state(marks, extracted_marks)
-        return {
-            "loss_embedding": self.loss_embedding_tracker.result(),
-            "loss_extract": self.loss_extract_tracker.result(),
-            "PSNR": self.psnr_tracker.result(),
-            "BER": self.ber_tracker.result(),
-        }

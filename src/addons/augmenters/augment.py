@@ -21,11 +21,11 @@ from src.addons.augmenters.base import (
     random_crop,
     identity,
 )
-from typing import Callable
+from typing import Callable, Optional, Tuple
 
 
-@tf.py_function(Tout=tf.uint8)
-def augment(images: tf.Tensor) -> tf.Tensor:
+@tf.py_function(Tout=[tf.float32, tf.float32])
+def augment(images: tf.Tensor, marks: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Take an image and apply random data augmentation.
 
@@ -33,11 +33,13 @@ def augment(images: tf.Tensor) -> tf.Tensor:
     ----------
     images : tf.Tensor
          A tensor represented an image.
+    marks : tf.Tensor
+        A tensor represented an mark.
 
     Returns
     -------
-    tf.Tensor
-        Augmented image.
+    Tuple[tf.Tensor, tf.Tensor]
+        Augmented image and mark tensors.
     """
     augmentation = [random_flip, random_hue, random_saturation, random_brightness, random_contrast]
 
@@ -45,7 +47,7 @@ def augment(images: tf.Tensor) -> tf.Tensor:
         if tf.random.uniform([], 0, 1) > 0.25:
             images = func(images)
 
-    return tf.cast(images, tf.uint8)
+    return tf.cast(images, tf.float32), marks
 
 
 attacks = {
@@ -75,14 +77,20 @@ attack_probs = {
 }
 
 
-def random_attacks() -> Callable:
+@tf.py_function(Tout=tf.float32)
+def random_attacks(images: tf.Tensor) -> tf.Tensor:
     """
     Randomly choose an attack function.
 
+    Parameters
+    ----------
+    images : tf.Tensor
+        Images to randomly attack.
+
     Returns
     -------
-    Callable
-        Chosen attack function.
+    tf.Tensor
+        Augmented images.
     """
-    attack = choices(list(attack_probs.keys()), weights=list(attack_probs.values()), k=1)
-    return attacks[attack]
+    attack = choices(list(attack_probs.keys()), weights=list(attack_probs.values()), k=1)[0]
+    return attacks[attack](images)

@@ -8,6 +8,7 @@ import tensorflow as tf
 
 from src.addons.augmenters.augment import augment
 from src.addons.images.load import load_image
+from src.addons.images.mark import random_mark
 
 
 def train_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
