@@ -1,6 +1,6 @@
 export PYTHONPATH=$(shell pwd)
 
-VIRTUAL_ENV=$(shell pwd)/venv
+VIRTUAL_ENV=$(shell pwd)/.venv
 PYTHON=${VIRTUAL_ENV}/bin/python
 JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
 PIP=${VIRTUAL_ENV}/bin/pip
@@ -18,7 +18,9 @@ notebook:
 get_data:
 	rm -rf .env
 	mkdir -p data/images
+	mkdir -p data/params
 	@echo DATA_URL="https://datasets-server.huggingface.co/rows?dataset=ioclab%2Fgrayscale_image_aesthetic_10k&config=default&split=train" >> .env
 	@echo RAW_PATH=$(shell pwd)/data/ >> .env
+	@echo RAW_PATH=$(shell pwd)/data/params >> .env
 	$(PYTHON) src/data/build_dataset.py
 

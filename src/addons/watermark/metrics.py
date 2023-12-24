@@ -4,6 +4,7 @@ Custom metrics
 """
 import tensorflow as tf
 import keras
+from keras.losses import MeanSquaredError
 
 
 def peak_signal_noise_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
@@ -20,16 +21,11 @@ def peak_signal_noise_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     Returns
     -------
     tf.Tensor
-        Peak signal-to-noise ratio value
+        Peak signal-to-noise ratio.
     """
-    y_true = tf.cast(y_true, tf.float32)
-    y_pred = tf.cast(y_pred, tf.float32)
-
-    mse = tf.reduce_mean(tf.math.squared_difference(y_true, y_pred), axis=[-3, -2, -1])
-    return tf.math.subtract(
-        20.0 * tf.math.log(255.0) / tf.math.log(10.0),
-        10.0 / tf.math.log(10.0) * tf.math.log(mse),
-    )
+    mse = tf.math.reduce_mean(tf.math.square(y_true - y_pred), axis=[-3, -2, -1])
+    signal_noise = 10 * (tf.math.log((255**2) / mse) / tf.math.log(10.0))
+    return tf.math.reduce_mean(signal_noise)
 
 
 def bit_error_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
@@ -39,17 +35,19 @@ def bit_error_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     Parameters
     ----------
     y_true : tf.Tensor
-        Ground truth values
+        Ground truth values.
     y_pred : tf.Tensor
-        The predicted values
+        The predicted values.
 
     Returns
     -------
-        bit error ration
+    tf.Tensor
+        bit error ratio.
     """
-    y_true = tf.cast(y_true, tf.int32)
-    y_pred = tf.cast(y_pred, tf.int32)
-    return tf.reduce_mean(tf.cast(tf.math.equal(y_true, y_pred), tf.float32), axis=[-3, -2, -1])
+    bit_error = 1 - tf.cast(tf.math.equal(y_true, y_pred), tf.float32)
+    area = tf.cast(tf.size(y_true[0]), tf.float32)
+    ber = 100 * (tf.math.reduce_sum(bit_error, axis=[-3, -2, -1]) / area)
+    return tf.math.reduce_mean(ber)
 
 
 class PeakSignalNoiseRatio(keras.metrics.MeanMetricWrapper):

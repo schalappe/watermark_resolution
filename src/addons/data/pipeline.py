@@ -6,9 +6,8 @@ from typing import Sequence
 
 import tensorflow as tf
 
-from src.addons.augmenters.augment import augment
-from src.addons.images.load import load_image
-from src.addons.images.mark import random_mark
+from src.addons.data.augment import augment
+from src.addons.images.load import get_image_and_mark
 
 
 def train_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
@@ -30,7 +29,7 @@ def train_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
     return (
         tf.data.Dataset.from_tensor_slices(paths)
         .shuffle(1024, seed=1335)
-        .map(load_image, num_parallel_calls=tf.data.AUTOTUNE)
+        .map(get_image_and_mark, num_parallel_calls=tf.data.AUTOTUNE)
         .cache()
         .batch(batch_size=batch)
         .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
@@ -56,7 +55,7 @@ def test_pipeline(paths: Sequence[str], batch: int) -> tf.data.Dataset:
     """
     return (
         tf.data.Dataset.from_tensor_slices(paths)
-        .map(load_image, num_parallel_calls=tf.data.AUTOTUNE)
+        .map(get_image_and_mark, num_parallel_calls=tf.data.AUTOTUNE)
         .batch(batch_size=batch)
         .cache()
         .prefetch(buffer_size=tf.data.AUTOTUNE)

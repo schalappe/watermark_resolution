@@ -3,206 +3,303 @@
 Set of layers for watermark model.
 """
 import tensorflow as tf
-import keras
+from typing import Tuple
+from keras import layers
+from keras.layers import Layer, AveragePooling2D, Activation
 
 
-class XORScrambleLayer(keras.layers.Layer):
+class RGBToYCbCr(Layer):
     """
-    XOR operation as scrambling algorithm.
+    Convert RGB images to YCbCr images.
     """
 
-    def __init__(self, key: str, **kwargs) -> None:
-        super(XORScrambleLayer, self).__init__(**kwargs)
-
-        self.key = key
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.kernel = tf.constant(
+            [[0.299, 0.587, 0.114], [-0.168736, -0.331264, 0.5], [0.5, -0.418688, -0.081312]], dtype=tf.float32
+        )
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """
-        XOR operation as scrambling algorithm.
+        Convert RGB images to YCbCr images.
 
         Parameters
         ----------
         inputs : tf.Tensor
-            Data to scramble.
+            Tensor represented a RGB images
 
         Returns
         -------
         tf.Tensor
-            Scrambled data.
+            Tensor represented a YCbCr images.
         """
-        flatten_data = tf.cast(tf.reshape(inputs, (-1, 1)), tf.uint8)
-
-        key_tensor = tf.constant(int(self.key, 2), dtype=tf.uint8)
-        scrambled_data = tf.bitwise.bitwise_xor(flatten_data, key_tensor)
-        scrambled_data = tf.cast(tf.reshape(scrambled_data, tf.shape(inputs)), inputs.dtype)
-
-        return scrambled_data
+        return tf.tensordot(inputs, tf.transpose(self.kernel), axes=((-1,), (0,)))
 
 
-class Descaling(keras.layers.Layer):
+class YCbCrToRGB(Layer):
     """
-    De-normalization layer.
+    Convert YCbCr images to RGB images.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.kernel = tf.constant([[1.0, 0.0, 1.402], [1.0, -0.344136, -0.714136], [1.0, 1.772, 0.0]], dtype=tf.float32)
+
+    def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
+        """
+        Convert YCbCr images to RGB images.
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            Tensor represented a YCbCr images.
+
+        Returns
+        -------
+        tf.Tensor
+            Tensor represented a RGB images.
+        """
+        return tf.tensordot(inputs, tf.transpose(self.kernel), axes=((-1,), (0,)))
+
+
+class InverseRescaling(Layer):
+    """
+    Inverse rescaling operation.
     """
 
     def __init__(self, scale, offset, **kwargs):
-        super(Descaling, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.scale = scale
         self.offset = offset
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """
-        De-normalization operation.
+        Inverse rescaling operation on the input data.
 
         Parameters
         ----------
         inputs : tf.Tensor
-            Data to de-normalize.
+            Tensor represented data.
 
         Returns
         -------
         tf.Tensor
-            De-normalized data.
+            Result of the inverse rescaling operation.
         """
-        return (inputs - self.offset) / self.scale
+        return (inputs - tf.cast(self.offset, dtype=inputs.dtype)) / tf.cast(self.scale, inputs.dtype)
 
 
-class UpScalingLayer(keras.layers.Layer):
+class SplitLumaChroma(Layer):
     """
-    Stack of many neural layers.
-
-    Conv2DTranspose => Batch Normalization => RELU => Average Pooling
+    Split YCbCr into Luma and Chroma components.
     """
 
-    def __init__(self, filters: int, kernel: int, strides: int, **kwargs):
-        super(UpScalingLayer, self).__init__(**kwargs)
-
-        self.conv = keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel, strides=strides)
-        self.norm = keras.layers.BatchNormalization()
-        self.relu = keras.layers.ReLU()
-        self.pool = keras.layers.AveragePooling2D(pool_size=2, strides=1)
-
-    def call(self, inputs: tf.Tensor, training: bool = False, **kwargs) -> tf.Tensor:
+    def call(self, inputs: tf.Tensor, **kwargs) -> Tuple[tf.Tensor, tf.Tensor]:
         """
-        Stack of multiple neural layers.
+        Split YCbCr into Luma and Chroma components.
 
         Parameters
         ----------
         inputs : tf.Tensor
-            Input tensor.
-        training : bool, default=False
-            Whether is training or not.
+            Tensor represented data.
+
+        Returns
+        -------
+        tf.Tensor, tf.Tensor
+            Luma components and chroma components.
+        """
+        return inputs[:, :, :, 0:1], inputs[:, :, :, 1:]
+
+
+class UpSampling(Layer):
+    """
+    Upsampling layer.
+    """
+
+    def __init__(self, filters, kernel, strides, **kwargs):
+        super().__init__(**kwargs)
+        self.conv = layers.Conv2DTranspose(filters, kernel, strides=strides)
+        self.norm = layers.BatchNormalization()
+        self.pool = AveragePooling2D(pool_size=2, strides=1)
+
+    def call(self, inputs: tf.Tensor, last=False, **kwargs) -> tf.Tensor:
+        """
+        Stack of multiple neural network layers:
+            - Conv2DTranspose => Batch Normalization => RELU => Average Pooling
+            - if last is True: Conv2DTranspose => Average Pooling.
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            Tensor represented input data.
+        last : bool, default=False
+            Last layer or not.
 
         Returns
         -------
         tf.Tensor
-            Output tensor.
+            Output of the upsampling layer.
         """
-        block = self.conv(inputs)
-        block = self.norm(block, training=training)
-        block = self.relu(block)
-        block = self.pool(block)
+        hidden = self.conv(inputs)
+        if last is False:
+            hidden = self.norm(hidden)
+            hidden = Activation("relu")(hidden)
+        return self.pool(hidden)
 
-        return block
 
-
-class LastUpScalingLayer(keras.layers.Layer):
+class ReluConvolution(Layer):
     """
-    Stack of many neural layers.
-
-    Conv2DTranspose => Average Pooling
+    Stack of convolution layers and relu activation.
     """
 
-    def __init__(self, filters: int, kernel: int, strides: int, **kwargs):
-        super(LastUpScalingLayer, self).__init__(**kwargs)
-
-        self.conv = keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel, strides=strides)
-        self.pool = keras.layers.AveragePooling2D(pool_size=2, strides=1)
+    def __init__(self, filters, kernel, strides, **kwargs):
+        super().__init__(**kwargs)
+        self.conv = layers.Conv2D(filters, kernel, strides=strides, padding="same")
+        self.norm = layers.BatchNormalization()
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """
-        Stack of multiple neural layers.
+        Stack of multiple neural network layers: Conv2D => Batch Normalization => ReLU.
 
         Parameters
         ----------
         inputs : tf.Tensor
-            Input tensor.
+            Tensor represented input data.
 
         Returns
         -------
         tf.Tensor
-            Output tensor.
+            Output of the convolution layer.
         """
-        block = self.conv(inputs)
-        block = self.pool(block)
+        hidden = self.conv(inputs)
+        hidden = self.norm(hidden)
+        return Activation("relu")(hidden)
 
-        return block
 
-
-class ConvolutionLayer(keras.layers.Layer):
+class TanhConvolution(Layer):
     """
-    Stack of multiple neural layers.
-
-    Conv2D => Batch Normalization => ReLU
+    Stack of convolution layers and tanh activation.
     """
 
-    def __init__(self, filters: int, kernel: int, strides: int, **kwargs):
-        super(ConvolutionLayer, self).__init__(**kwargs)
-
-        self.conv = keras.layers.Conv2D(filters=filters, kernel_size=kernel, strides=strides, padding="same")
-        self.norm = keras.layers.BatchNormalization()
-        self.relu = keras.layers.ReLU()
-
-    def call(self, inputs: tf.Tensor, training: bool = False, **kwargs) -> tf.Tensor:
-        """
-        Stack of multiple neural layers.
-
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            Input tensor.
-        training : bool, default=False
-            Whether is training or not.
-
-        Returns
-        -------
-        tf.Tensor
-            Output tensor.
-        """
-        block = self.conv(inputs)
-        block = self.norm(block, training=training)
-        block = self.relu(block)
-
-        return block
-
-
-class TanhConvolutionLayer(keras.layers.Layer):
-    """
-    Stack of multiple neural layers.
-
-    Conv2D => Tanh
-    """
-
-    def __init__(self, filters: int, kernel: int, strides: int, **kwargs):
-        super(TanhConvolutionLayer, self).__init__(**kwargs)
-
-        self.conv = keras.layers.Conv2D(filters=filters, kernel_size=kernel, strides=strides, padding="same")
-        self.tanh = keras.activations.tanh
+    def __init__(self, filters, kernel, strides, **kwargs):
+        super().__init__(**kwargs)
+        self.conv = layers.Conv2D(filters, kernel, strides=strides, padding="same")
 
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         """
-        Stack of multiple neural layers.
+        Stack of multiple neural network layers: Conv2D => Tanh.
 
         Parameters
         ----------
         inputs : tf.Tensor
-            Input tensor.
+            Tensor represented input data.
 
         Returns
         -------
         tf.Tensor
-            Output tensor.
+            Output of the convolution layer.
         """
-        block = self.conv(inputs)
-        block = self.tanh(block)
+        hidden = self.conv(inputs)
+        return Activation("tanh")(hidden)
 
-        return block
+
+class ArnoldCat(Layer):
+    """
+    Arnold cat algorithm for image scrambling.
+    """
+
+    def __init__(self, iterations: float, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.iterations = int(iterations)
+
+    def scramble(self, inputs: tf.Tensor) -> tf.Tensor:
+        """
+        Scramble an input data with arnold cat algorithm.
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            Tensor represented input data.
+
+        Returns
+        -------
+        tf.Tensor
+            Output of the arnold cat algorithm.
+        """
+        height, width = tf.shape(inputs)[0], tf.shape(inputs)[1]
+
+        for _ in range(self.iterations):
+            x, y = tf.meshgrid(tf.range(width), tf.range(height))
+            new_x = tf.math.floormod(2 * x + y, width)
+            new_y = tf.math.floormod(x + y, height)
+            indices = tf.transpose(tf.stack([new_y, new_x], axis=0))
+            inputs = tf.gather_nd(inputs, indices)
+
+        return inputs
+
+    def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
+        """
+        Scramble an input data with arnold cat algorithm.
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            Tensor represented input data.
+
+        Returns
+        -------
+        tf.Tensor
+            Output of the arnold cat algorithm.
+        """
+        return tf.map_fn(self.scramble, inputs)
+
+
+class InverseArnoldCat(Layer):
+    """
+    Arnold cat algorithm for image scrambling.
+    """
+
+    def __init__(self, iterations: float, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.iterations = int(iterations)
+
+    def descramble(self, inputs: tf.Tensor) -> tf.Tensor:
+        """
+        De-scramble an input data with arnold cat algorithm.
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            Tensor represented input data.
+
+        Returns
+        -------
+        tf.Tensor
+            Output of the arnold cat algorithm.
+        """
+        height, width = tf.shape(inputs)[0], tf.shape(inputs)[1]
+
+        for _ in range(self.iterations):
+            x, y = tf.meshgrid(tf.range(width), tf.range(height))
+            new_x = tf.math.floormod(-2 * x + y, width)
+            new_y = tf.math.floormod(x - y, height)
+            indices = tf.transpose(tf.stack([new_y, new_x], axis=0))
+            inputs = tf.gather_nd(inputs, indices)
+
+        return inputs
+
+    def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
+        """
+        De-scramble an input data with arnold cat algorithm.
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            Tensor represented input data.
+
+        Returns
+        -------
+        tf.Tensor
+            Output of the arnold cat algorithm.
+        """
+        return tf.map_fn(self.descramble, inputs)

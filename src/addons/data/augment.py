@@ -4,7 +4,7 @@ Set of functions for data augmentation.
 """
 import tensorflow as tf
 from random import choices
-from src.addons.augmenters.base import (
+from src.addons.data.base import (
     random_hue,
     random_flip,
     random_saturation,
@@ -21,10 +21,10 @@ from src.addons.augmenters.base import (
     random_crop,
     identity,
 )
-from typing import Callable, Optional, Tuple
+from typing import Tuple
 
 
-@tf.py_function(Tout=[tf.float32, tf.float32])
+@tf.numpy_function(Tout=[tf.float32, tf.float32])
 def augment(images: tf.Tensor, marks: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Take an image and apply random data augmentation.
@@ -77,7 +77,7 @@ attack_probs = {
 }
 
 
-@tf.py_function(Tout=tf.float32)
+@tf.numpy_function(Tout=tf.float32)
 def random_attacks(images: tf.Tensor) -> tf.Tensor:
     """
     Randomly choose an attack function.
