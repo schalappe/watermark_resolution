@@ -2,26 +2,28 @@
 """
 Set of functions for data augmentation.
 """
-import tensorflow as tf
 from random import choices
+from typing import Tuple
+
+import tensorflow as tf
+
 from src.addons.data.base import (
-    random_hue,
-    random_flip,
-    random_saturation,
+    identity,
+    random_average_blur,
     random_brightness,
     random_contrast,
-    random_rotate,
-    random_dropout,
-    random_average_blur,
-    random_gaussian_blur,
-    random_median_blur,
-    random_salt_pepper,
-    random_gaussian_noise,
-    random_jpeg_quality,
     random_crop,
-    identity,
+    random_dropout,
+    random_flip,
+    random_gaussian_blur,
+    random_gaussian_noise,
+    random_hue,
+    random_jpeg_quality,
+    random_median_blur,
+    random_rotate,
+    random_salt_pepper,
+    random_saturation,
 )
-from typing import Tuple
 
 
 @tf.numpy_function(Tout=[tf.float32, tf.float32])

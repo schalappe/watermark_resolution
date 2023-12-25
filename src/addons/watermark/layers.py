@@ -2,10 +2,11 @@
 """
 Set of layers for watermark model.
 """
-import tensorflow as tf
 from typing import Tuple
+
+import tensorflow as tf
 from keras import layers
-from keras.layers import Layer, AveragePooling2D, Activation
+from keras.layers import Activation, AveragePooling2D, Layer
 
 
 class RGBToYCbCr(Layer):

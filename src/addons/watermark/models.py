@@ -5,14 +5,14 @@ Network and subnetwork for watermark.
 from typing import Tuple
 
 import keras
-from keras import Model
-from keras import layers
+from keras import Model, layers
+
 from src.addons.watermark.submodels import (
-    to_luma_chroma_stack,
-    to_rgb_stack,
-    prepare_mark_stack,
     embedding_stack,
     extract_stack,
+    prepare_mark_stack,
+    to_luma_chroma_stack,
+    to_rgb_stack,
 )
 
 

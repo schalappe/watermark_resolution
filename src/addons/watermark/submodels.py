@@ -3,18 +3,20 @@
 Set of sub-models used in the watermark.
 """
 from typing import Tuple
+
 from keras import layers
-from keras.layers import Layer, Rescaling, Lambda
+from keras.layers import Lambda, Layer, Rescaling
+
 from src.addons.watermark.layers import (
-    YCbCrToRGB,
-    RGBToYCbCr,
-    SplitLumaChroma,
-    InverseRescaling,
-    UpSampling,
-    ReluConvolution,
-    TanhConvolution,
     ArnoldCat,
     InverseArnoldCat,
+    InverseRescaling,
+    ReluConvolution,
+    RGBToYCbCr,
+    SplitLumaChroma,
+    TanhConvolution,
+    UpSampling,
+    YCbCrToRGB,
 )
 
 
@@ -61,7 +63,7 @@ def to_rgb_stack(inputs: Tuple[Layer, Layer]) -> Layer:
     return InverseRescaling(scale=1.0 / 255, offset=0.0)(hidden)  # ##: Rescale [0, 1] to [0,255]
 
 
-def prepare_mark_stack(inputs: Layer, strength: float = 1.0) -> Layer:
+def prepare_mark_stack(inputs: Layer, strength: float = 1.0, scramble: bool = False) -> Layer:
     """
     Stack multiple layers of neural networks for preprocessing mark images.
 
@@ -71,14 +73,18 @@ def prepare_mark_stack(inputs: Layer, strength: float = 1.0) -> Layer:
         Layer to stack.
     strength : float, default=1.0
         Strength factor to apply to the last layer.
+    scramble : bool, default=False
+        Scramble the input data.
 
     Returns
     -------
     Layer
         Final layer of stacked layers.
     """
-    hidden = ArnoldCat(iterations=1)(inputs)
-    hidden = UpSampling(filters=512, kernel=3, strides=2)(hidden)
+    if scramble is True:
+        inputs = ArnoldCat(iterations=1)(inputs)
+
+    hidden = UpSampling(filters=512, kernel=3, strides=2)(inputs)
     hidden = UpSampling(filters=256, kernel=3, strides=2)(hidden)
     hidden = UpSampling(filters=128, kernel=3, strides=2)(hidden)
     hidden = UpSampling(filters=1, kernel=3, strides=2)(hidden, last=True)
@@ -106,7 +112,7 @@ def embedding_stack(inputs: Layer) -> Layer:
     return TanhConvolution(filters=1, kernel=3, strides=1)(hidden)
 
 
-def extract_stack(inputs: Layer) -> Layer:
+def extract_stack(inputs: Layer, scramble: bool = False) -> Layer:
     """
     Stack multiple layers of neural networks for extracting marks.
 
@@ -114,6 +120,8 @@ def extract_stack(inputs: Layer) -> Layer:
     ----------
     inputs : Layer
         Layer to stack.
+    scramble : bool, default=False
+        Scramble the output data.
 
     Returns
     -------
@@ -126,4 +134,7 @@ def extract_stack(inputs: Layer) -> Layer:
     hidden = TanhConvolution(filters=1, kernel=3, strides=2)(hidden)
     hidden = InverseRescaling(scale=2.0, offset=-1.0)(hidden)  # ##: Rescale [-1, 1] to [0,1]
 
-    return InverseArnoldCat(iterations=1)(hidden)
+    if scramble is True:
+        InverseArnoldCat(iterations=1)(hidden)
+
+    return hidden

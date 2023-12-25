@@ -3,12 +3,12 @@
 Script for downloading data.
 """
 import sys
-from os.path import join
-from rich.progress import track
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from requests import get, ConnectTimeout, ConnectionError, ReadTimeout
-from loguru import logger
+from os.path import join
 
+from loguru import logger
+from requests import ConnectionError, ConnectTimeout, ReadTimeout, get
+from rich.progress import track
 
 logger.add(sys.stderr, format="{time}-{level}: {message}")
 
@@ -87,6 +87,7 @@ def download_data(data_url: str, data_path: str) -> None:
 
 if __name__ == "__main__":
     import os
+
     from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv())

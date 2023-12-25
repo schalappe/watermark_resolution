@@ -2,9 +2,8 @@
 """
 Custom metrics
 """
-import tensorflow as tf
 import keras
-from keras.losses import MeanSquaredError
+import tensorflow as tf
 
 
 def peak_signal_noise_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
@@ -44,7 +43,7 @@ def bit_error_ratio(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     tf.Tensor
         bit error ratio.
     """
-    bit_error = 1 - tf.cast(tf.math.equal(y_true, y_pred), tf.float32)
+    bit_error = tf.cast(tf.math.not_equal(y_true, y_pred), tf.float32)
     area = tf.cast(tf.size(y_true[0]), tf.float32)
     ber = 100 * (tf.math.reduce_sum(bit_error, axis=[-3, -2, -1]) / area)
     return tf.math.reduce_mean(ber)

@@ -2,9 +2,11 @@
 """
 Set of function for read and decode image.
 """
-import tensorflow as tf
-from src.addons.images.mark import random_mark
 from typing import Tuple
+
+import tensorflow as tf
+
+from src.addons.images.mark import random_mark
 
 
 def load_image(image_path: str) -> tf.Tensor:

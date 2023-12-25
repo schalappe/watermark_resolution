@@ -3,9 +3,10 @@ export PYTHONPATH=$(shell pwd)
 VIRTUAL_ENV=$(shell pwd)/.venv
 PYTHON=${VIRTUAL_ENV}/bin/python
 JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
+OPTUNA=${VIRTUAL_ENV}/bin/optuna-dashboard
 PIP=${VIRTUAL_ENV}/bin/pip
 
-.PHONY: get_data notebook
+.PHONY: train_model search_loss search_model get_data notebook
 .ONESHELL: get_data
 
 create_virtualenv: requirements.txt
@@ -14,6 +15,9 @@ create_virtualenv: requirements.txt
 
 notebook:
 	cd notebooks/ && $(JUPYTER) --port=8080
+
+dashboard:
+	$(OPTUNA) sqlite:///data/params/watermark.db
 
 get_data:
 	rm -rf .env
@@ -24,3 +28,11 @@ get_data:
 	@echo RAW_PATH=$(shell pwd)/data/params >> .env
 	$(PYTHON) src/data/build_dataset.py
 
+search_model:
+	$(PYTHON) src/scripts/search_parameters_model.py
+
+search_loss:
+	$(PYTHON) src/scripts/search_parameters_loss.py
+
+train_model:
+	$(PYTHON) src/scripts/train_model.py

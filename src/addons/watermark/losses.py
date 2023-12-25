@@ -2,10 +2,11 @@
 """
 Custom losses
 """
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
+
 import tensorflow as tf
 from keras.layers import Rescaling
-from keras.losses import MeanAbsoluteError, MeanSquaredError, Loss
+from keras.losses import Loss, MeanAbsoluteError, MeanSquaredError
 
 
 class WatermarkLoss(Loss):

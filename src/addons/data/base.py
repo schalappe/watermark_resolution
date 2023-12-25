@@ -2,24 +2,24 @@
 """
 Set of functions to modify an image.
 """
+import tensorflow as tf
 from imgaug.augmenters import (
-    Fliplr,
-    Flipud,
+    AdditiveGaussianNoise,
+    AddToBrightness,
     AddToHue,
     AddToSaturation,
-    AddToBrightness,
-    GammaContrast,
-    AdditiveGaussianNoise,
     AverageBlur,
-    Dropout,
-    MedianBlur,
-    GaussianBlur,
-    Rotate,
     CropAndPad,
-    SaltAndPepper,
+    Dropout,
+    Fliplr,
+    Flipud,
+    GammaContrast,
+    GaussianBlur,
     JpegCompression,
+    MedianBlur,
+    Rotate,
+    SaltAndPepper,
 )
-import tensorflow as tf
 
 
 @tf.py_function(Tout=tf.float32)

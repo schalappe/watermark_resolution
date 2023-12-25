@@ -8,9 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 
-def print_tables(
-    title: str, headers: Union[list, tuple], contents: Union[list, tuple]
-) -> None:
+def print_tables(title: str, headers: Union[list, tuple], contents: Union[list, tuple]) -> None:
     """
     Print a table in console
     Parameters
