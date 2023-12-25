@@ -1,0 +1,21 @@
+{
+  "embedding": {
+    "optimizer": "Adam",
+    "configuration": {
+      "learning_rate": 0.0009
+    }
+  },
+  "extract": {
+    "optimizer": "Adam",
+    "configuration": {
+      "learning_rate": 0.03
+    }
+  },
+  "loss":{
+    "strength_embedding_mse": 76.2,
+    "strength_embedding_mae": 0.71,
+    "strength_extraction_mae": 63.6
+  },
+  "batch_size": 56,
+  "epochs": 100
+}

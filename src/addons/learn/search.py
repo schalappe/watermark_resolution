@@ -13,7 +13,7 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 from src.addons.data.pipeline import test_pipeline, train_pipeline
-from src.addons.learn.train import Watermark
+from src.addons.learn.train import train_model
 
 
 def get_dataset(batch_size: int) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
@@ -30,7 +30,7 @@ def get_dataset(batch_size: int) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
     Tuple[tf.data.Dataset, tf.data.Dataset]
         Training and testing datasets.
     """
-    images_path = glob(join(os.environ.get("RAW_PATH"), "images") + sep + "*.jpg")
+    images_path = glob(join(os.environ.get("RAW_PATH"), "train") + sep + "*.jpg")
     train_path, test_path = train_test_split(images_path, test_size=0.2, random_state=1335)
     return train_pipeline(train_path, batch=batch_size), test_pipeline(test_path, batch=batch_size)
 
@@ -55,7 +55,7 @@ def get_optimizer(optimizer: str, config: Dict[str, Any]) -> keras.optimizers.Op
     return optimizer
 
 
-def create_optimizer(trial, model_name: str) -> keras.optimizers.Optimizer:
+def create_optimizer(trial, model_name: str, config: Dict[str, Any]) -> keras.optimizers.Optimizer:
     """
     Create an optimizer for model's training.
 
@@ -64,6 +64,8 @@ def create_optimizer(trial, model_name: str) -> keras.optimizers.Optimizer:
     trial
     model_name : str
         Name of the model.
+    config : Dict[str, Any]
+        Configuration dictionary.
 
     Returns
     -------
@@ -72,28 +74,29 @@ def create_optimizer(trial, model_name: str) -> keras.optimizers.Optimizer:
     """
     # We optimize the choice of optimizers as well as their parameters.
     kwargs = {}
-    # optimizer_selected = trial.suggest_categorical(f"optimizer_{model_name}", ["RMSprop", "Adam", "SGD"])
-    optimizer_selected = trial.suggest_categorical(f"optimizer_{model_name}", ["Adam"])
+    optimizer_selected = trial.suggest_categorical(f"optimizer_{model_name}", config["optimizers"])
     if optimizer_selected == "RMSprop":
-        kwargs["learning_rate"] = trial.suggest_float(f"rmsprop_{model_name}_learning_rate", 1e-5, 1e-1, log=True)
-        kwargs["weight_decay"] = trial.suggest_float(f"rmsprop_{model_name}_weight_decay", 0.85, 0.99)
-        kwargs["momentum"] = trial.suggest_float(f"rmsprop_{model_name}_momentum", 1e-5, 1e-1, log=True)
+        kwargs["learning_rate"] = trial.suggest_float(f"rmsprop_{model_name}_learning_rate", **config["learning_rate"])
+        kwargs["weight_decay"] = trial.suggest_float(f"rmsprop_{model_name}_weight_decay", **config["weight_decay"])
+        kwargs["momentum"] = trial.suggest_float(f"rmsprop_{model_name}_momentum", **config["momentum"])
     elif optimizer_selected == "Adam":
-        kwargs["learning_rate"] = trial.suggest_float(f"adam_{model_name}_learning_rate", 1e-5, 1e-1, log=True)
+        kwargs["learning_rate"] = trial.suggest_float(f"adam_{model_name}_learning_rate", **config["learning_rate"])
     elif optimizer_selected == "SGD":
-        kwargs["learning_rate"] = trial.suggest_float(f"sgd_{model_name}_opt_learning_rate", 1e-5, 1e-1, log=True)
-        kwargs["momentum"] = trial.suggest_float(f"sgd_opt_{model_name}_momentum", 1e-5, 1e-1, log=True)
+        kwargs["learning_rate"] = trial.suggest_float(f"sgd_{model_name}_opt_learning_rate", **config["learning_rate"])
+        kwargs["momentum"] = trial.suggest_float(f"sgd_opt_{model_name}_momentum", **config["momentum"])
 
     return get_optimizer(optimizer=optimizer_selected, config=kwargs)
 
 
-def create_loss(trial) -> Dict[str, float]:
+def create_loss(trial, config: Dict[str, Any]) -> Dict[str, float]:
     """
     Create a loss function.
 
     Parameters
     ----------
     trial
+    config : Dict[str, Any]
+        Configuration dictionary.
 
     Returns
     -------
@@ -101,54 +104,72 @@ def create_loss(trial) -> Dict[str, float]:
         Loss configuration for training.
     """
     kwargs = {
-        "strength_embedding_mse": trial.suggest_float("loss_strength_embedding_mse", 10, 100),
-        "strength_embedding_mae": trial.suggest_float("loss_strength_embedding_mae", 0.1, 0.99, log=True),
-        "strength_extraction_mae": trial.suggest_float("loss_strength_extraction_mae", 10, 100),
+        "strength_embedding_mse": trial.suggest_float("loss_strength_embedding_mse", **config["loss_alpha"]),
+        "strength_embedding_mae": trial.suggest_float("loss_strength_embedding_mae", **config["loss_beta"]),
+        "strength_extraction_mae": trial.suggest_float("loss_strength_extraction_mae", **config["loss_alpha"]),
     }
     return kwargs
 
 
 def objective_model(trial) -> Tuple[float, float]:
-    trainer = Watermark.create()
-    trainer.compile(
-        embedding_optimizer=create_optimizer(trial, model_name="watermark"),
-        extractor_optimizer=create_optimizer(trial, model_name="extract"),
-    )
+    """
+    Optimize function for search model hyperparameters.
+
+    Returns
+    -------
+    Tuple[float, float]
+        Peak signal noise ratio and bit errors ratio
+    """
+    # ##: Get best hyper-parameters.
+    with open(join(os.environ.get("MODELS_PATH"), "search_space.json"), "r", encoding="utf-8") as file:
+        search = json.load(file)
+
+    # ##: Create optimizers.
+    embedding_optimizer = create_optimizer(trial, model_name="watermark", config=search["optimizer"])
+    extractor_optimizer = create_optimizer(trial, model_name="extract", config=search["optimizer"])
 
     # ##: Create datasets.
-    batch_size = trial.suggest_int("batch_size", 16, 64)
+    batch_size = trial.suggest_int("batch_size", **search["batch_size"])
     train_set, test_set = get_dataset(batch_size=batch_size)
+
+    # ##: Epochs and loss arguments.
+    epochs = trial.suggest_int("epochs", **search["epochs"])
     loss = {"strength_embedding_mse": 45.0, "strength_embedding_mae": 0.2, "strength_extraction_mae": 20}
 
-    # ##: Train model.
-    epochs = trial.suggest_int("epochs", 30, 50)
-    trainer.fit(train_set=train_set, epochs=epochs, loss=loss)
-
-    # ##: Test model.
-    psnr, ber = trainer.evaluate(test_set, attack="identity")
-
-    return psnr, ber
+    return train_model(
+        dataset=(train_set, test_set), optimizers=(embedding_optimizer, extractor_optimizer), loss=loss, epochs=epochs
+    )
 
 
 def objective_loss(trial) -> Tuple[float, float]:
+    """
+    Optimize function for search loss arguments.
+
+    Returns
+    -------
+    Tuple[float, float]
+        Peak signal noise ratio and bit errors ratio
+    """
     # ##: Get best hyper-parameters.
-    with open(join(os.environ.get("PARAMS_PATH"), "best_params.json"), "r", encoding="utf-8") as file:
+    with open(join(os.environ.get("MODELS_PATH"), "best_params.json"), "r", encoding="utf-8") as file:
         best = json.load(file)
 
-    trainer = Watermark.create()
-    trainer.compile(
-        embedding_optimizer=get_optimizer(best["embedding"]["optimizer"], best["embedding"]["configuration"]),
-        extractor_optimizer=get_optimizer(best["extract"]["optimizer"], best["extract"]["configuration"]),
-    )
+    with open(join(os.environ.get("MODELS_PATH"), "search_space.json"), "r", encoding="utf-8") as file:
+        search = json.load(file)
+
+    # ##: Create optimizers.
+    embedding_optimizer = get_optimizer(best["embedding"]["optimizer"], best["embedding"]["configuration"])
+    extractor_optimizer = get_optimizer(best["extract"]["optimizer"], best["extract"]["configuration"])
 
     # ##: Create datasets.
     train_set, test_set = get_dataset(batch_size=best["batch_size"])
 
-    # ##: Train model.
-    loss = create_loss(trial)
-    trainer.fit(train_set=train_set, epochs=best["epochs"], loss=loss)
+    # ##: Create loss arguments.
+    loss = create_loss(trial, search["loss"])
 
-    # ##: Test model.
-    psnr, ber = trainer.evaluate(test_set, attack="identity")
-
-    return psnr, ber
+    return train_model(
+        dataset=(train_set, test_set),
+        optimizers=(embedding_optimizer, extractor_optimizer),
+        loss=loss,
+        epochs=best["epochs"],
+    )

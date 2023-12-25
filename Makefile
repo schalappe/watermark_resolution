@@ -6,8 +6,17 @@ JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
 OPTUNA=${VIRTUAL_ENV}/bin/optuna-dashboard
 PIP=${VIRTUAL_ENV}/bin/pip
 
-.PHONY: train_model search_loss search_model get_data notebook
-.ONESHELL: get_data
+.PHONY: train_model search_loss search_model initialize get_data notebook
+.ONESHELL: initialize get_data
+
+initialize:
+	rm -rf .env
+	mkdir -p data/train
+	mkdir -p data/tests
+	mkdir -p models/storage
+	mkdir -p models/params
+	@echo RAW_PATH=$(shell pwd)/data >> .env
+	@echo MODELS_PATH=$(shell pwd)/models >> .env
 
 create_virtualenv: requirements.txt
 	python3 -m venv $(VIRTUAL_ENV)
@@ -17,15 +26,11 @@ notebook:
 	cd notebooks/ && $(JUPYTER) --port=8080
 
 dashboard:
-	$(OPTUNA) sqlite:///data/params/watermark.db
+	$(OPTUNA) sqlite:///$(shell pwd)/models/params/watermark.db
 
 get_data:
-	rm -rf .env
-	mkdir -p data/images
-	mkdir -p data/params
-	@echo DATA_URL="https://datasets-server.huggingface.co/rows?dataset=ioclab%2Fgrayscale_image_aesthetic_10k&config=default&split=train" >> .env
-	@echo RAW_PATH=$(shell pwd)/data/ >> .env
-	@echo RAW_PATH=$(shell pwd)/data/params >> .env
+	@echo TRAIN_URL="https://datasets-server.huggingface.co/rows?dataset=ioclab%2Fgrayscale_image_aesthetic_10k&config=default&split=train" >> .env
+	@echo TESTS_URL="https://datasets-server.huggingface.co/rows?dataset=ioclab%2Fgrayscale_image_6k&config=default&split=train" >> .env
 	$(PYTHON) src/data/build_dataset.py
 
 search_model:
