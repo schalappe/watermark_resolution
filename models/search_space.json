@@ -1,0 +1,44 @@
+{
+  "optimizer": {
+    "optimizers": [
+      "Adam"
+    ],
+    "learning_rate": {
+      "low": 1e-5,
+      "high": 1e-1,
+      "log": true
+    },
+    "momentum": {
+      "low": 1e-5,
+      "high": 1e-1,
+      "log": true
+    },
+    "weight_decay": {
+      "low": 0.85,
+      "high": 0.99,
+      "log": true
+    }
+  },
+  "batch_size": {
+    "low": 16,
+    "high": 100,
+    "log": false
+  },
+  "epochs": {
+    "low": 30,
+    "high": 400,
+    "log": false
+  },
+  "loss": {
+    "loss_alpha": {
+      "low": 10,
+      "high": 100,
+      "log": false
+    },
+    "loss_beta": {
+      "low": 0.1,
+      "high": 0.99,
+      "log": true
+    }
+  }
+}

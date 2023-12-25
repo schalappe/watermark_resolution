@@ -132,10 +132,11 @@ dmypy.json
 .idea/
 
 # Data
-/data/
+data/
 
 # Model
-/models/
+models/storage
+models/params
 
 # unknow file
 .DS_Store
