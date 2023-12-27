@@ -2,20 +2,20 @@
   "embedding": {
     "optimizer": "Adam",
     "configuration": {
-      "learning_rate": 0.0009
+      "learning_rate": 0.006771039317372282
     }
   },
   "extract": {
     "optimizer": "Adam",
     "configuration": {
-      "learning_rate": 0.03
+      "learning_rate": 9.707284290411017e-05
     }
   },
   "loss":{
-    "strength_embedding_mse": 76.2,
-    "strength_embedding_mae": 0.71,
-    "strength_extraction_mae": 63.6
+    "strength_embedding_mse": 55.87139162826058,
+    "strength_embedding_mae": 0.5953980639957094,
+    "strength_extraction_mae": 20.0
   },
-  "batch_size": 56,
-  "epochs": 100
+  "batch_size": 71,
+  "epochs": 339
 }
