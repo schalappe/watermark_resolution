@@ -7,7 +7,7 @@ name = "watermark-resolution"
 version = "0.1.0"
 description = "CNN-based digital image watermarking adaptive to image and watermark resolution"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
     "imgaug>=0.4.0,<0.5.0",
@@ -17,15 +17,20 @@ dependencies = [
     "requests>=2.31",
     "rich>=13.6",
     "scikit-learn>=1.5,<2",
-    "tensorflow>=2.15,<2.16",
+    "tensorflow>=2.16,<2.19",
 ]
 
 [dependency-groups]
 dev = [
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "pylint>=3.3.6",
+    "radon>=6.0.1",
     "ipywidgets==8.1.1",
     "jupyterlab>=4.0.0",
     "optuna==3.5.0",
     "optuna-dashboard==0.14",
+    "tensorflow-metal>=1.2.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -36,7 +41,7 @@ profile = "black"
 
 [tool.black]
 line-length = 120
-target-version = ['py310', 'py311']
+target-version = ['py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
