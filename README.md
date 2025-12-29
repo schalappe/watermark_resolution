@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
 - [Initialize](#initialize)
 - [Dataset](#dataset)
 - [Hyperparameter Search](#hyperparameter-search)
@@ -26,13 +27,25 @@ Specifically, two neural networks are proposed: one to encode the mark in the im
 This implementation does not revise the proposed architecture but focuses on finding the hyper-parameters needed to
 train an optimal model.
 
+## Prerequisites
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management. Install it first:
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with Homebrew
+brew install uv
+```
+
 ## Initialize
 
 To start the project and install the required packages:
 
 ```bash
 make initialize
-make create_virtualenv
+make sync
 ```
 
 ## Dataset
@@ -52,7 +65,7 @@ make get_data
 
 ### Structure
 
-```
+```text
 watermark_resolution
 └───data
 │   └───train
