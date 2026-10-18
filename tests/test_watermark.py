@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from watermark.attacks import TRAINING_ATTACKS
+from watermark.attacks import TRAINING_ATTACKS, allocate, simulate
 from watermark.data import random_marks
 from watermark.evaluate import ber
 from watermark.model import Embedder, Extractor
@@ -24,10 +24,19 @@ def test_extraction_loss_reaches_embedder(name):
     host = torch.rand(4, 1, 128, 128) * 2 - 1
     mark = random_marks(4, 8)
     watermarked = embedder(host, mark)
-    l2 = (extractor(TRAINING_ATTACKS[name](watermarked, host)) - mark).abs().mean()
+    attacked = simulate(watermarked, host, [name])
+    l2 = (extractor(attacked) - mark).abs().mean()
     grads = torch.autograd.grad(l2, list(embedder.mark.parameters()))
     assert all(torch.isfinite(g).all() for g in grads)
     assert sum(g.abs().sum() for g in grads) > 0
+
+
+def test_table2_ratios_in_every_batch():
+    weights = [weight for weight, _ in TRAINING_ATTACKS.values()]
+    assert allocate(24, weights) == weights  # exact Table 2 ratios when the batch allows it
+    counts = allocate(100, weights)
+    assert sum(counts) == 100
+    assert all(abs(c - 100 * w / 24) < 1 for c, w in zip(counts, weights, strict=True))
 
 
 def test_ber_bounds():

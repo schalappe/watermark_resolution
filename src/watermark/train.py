@@ -17,7 +17,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from watermark.attacks import simulate
+from watermark.attacks import TRAINING_ATTACKS, simulate
 from watermark.data import load, random_marks, to_pixels, to_signal
 from watermark.evaluate import ber, device, psnr
 from watermark.model import Embedder, Extractor
@@ -36,9 +36,18 @@ LOG_FIELDS = ["epoch", "l1", "l2", "l_emb", "l_ext", "psnr", "ber", "seconds"]
 @click.option("--weight-decay", default=0.01, show_default=True)
 @click.option("--lambdas", type=float, nargs=3, default=(45.0, 0.2, 20.0), show_default=True, help="λ1 λ2 λ3")
 @click.option("--seed", default=0, show_default=True)
+@click.option(
+    "--attacks",
+    default=",".join(TRAINING_ATTACKS),
+    show_default=True,
+    help="Comma-separated Table 2 attacks to train with; their ratios are renormalized.",
+)
 def main(**options) -> None:
-    # List, not tuple: the config is compared with its JSON copy when a run resumes.
-    train(SimpleNamespace(**{**options, "lambdas": list(options["lambdas"])}))
+    attacks = options["attacks"].split(",")
+    if unknown := set(attacks) - set(TRAINING_ATTACKS):
+        raise click.BadParameter(f"unknown attacks {sorted(unknown)}", param_hint="--attacks")
+    # Lists, not tuples: the config is compared with its JSON copy when a run resumes.
+    train(SimpleNamespace(**{**options, "lambdas": list(options["lambdas"]), "attacks": attacks}))
 
 
 def train(args: SimpleNamespace) -> None:
@@ -98,7 +107,7 @@ def train(args: SimpleNamespace) -> None:
                 mark = random_marks(len(index), host.shape[-1] // 16, generator).to(run_device)
 
                 watermarked = embedder(host, mark)
-                extracted = extractor(simulate(watermarked, host))
+                extracted = extractor(simulate(watermarked, host, args.attacks))
                 l1 = (watermarked - host).pow(2).mean()  # Eq. 1
                 l2 = (extracted - mark).abs().mean()  # Eq. 2
                 l_emb = lambda1 * l1 + lambda2 * l2  # Eq. 3
