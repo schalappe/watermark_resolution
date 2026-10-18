@@ -228,19 +228,23 @@ The Mac is excluded for the full run. Measured on the M1 Pro (MPS, batch 100, mo
 attack): 2.96 s/step ≈ 296 s/epoch ≈ **13.7 days for 4000 epochs**. The paper took about 4 days on an
 RTX 2080 Ti (§4.2).
 
-- [ ] Compare the ways to train on a CUDA GPU. Candidates to check, none verified yet: hourly GPU
+- [x] Compare the ways to train on a CUDA GPU. Candidates to check, none verified yet: hourly GPU
       rental (e.g. RunPod, Vast.ai, Lambda), free notebook quotas (e.g. Kaggle, Colab), and cloud spot
       instances.
-- [ ] Criteria for each option:
+- [x] Criteria for each option:
   - a GPU at least as fast as an RTX 2080 Ti, supported by current PyTorch wheels;
   - disk for the 1.67 GB BOSS archive, the cached tensors, and the checkpoints;
   - session limits and interruptions, which the checkpoint/resume of 1.5 must cover;
   - price per hour;
   - total = step time × 400,000 steps (4000 epochs × 100 steps).
-- [ ] Deliverable: a comparison table with sourced prices, estimated duration, and estimated total
-      cost, plus a recommendation. The choice is yours (money).
-- [ ] On the chosen option, a short benchmark with the full Table 2 attack mix (run by a `verifier`)
-      confirms the step time before the full run starts.
+- [x] Deliverable: [`docs/training-resources.md`](training-resources.md), a comparison table with sourced
+      prices, estimated duration, and estimated total cost, plus a recommendation. The choice is yours
+      (money).
+- [x] On the chosen option, a short benchmark with the full Table 2 attack mix (run by a `verifier`)
+      confirms the step time before the full run starts. Runpod RTX 4090 was chosen on 2026-10-18 but was
+      out of stock; RTX 3090 Community ($0.22/h) used instead. Measured 2026-10-18: 0.212 s/step (mean of
+      epochs 2–10, `--limit 1000`, batch 100), GPU utilisation 86–89 % → ≈ 23.6 h and ≈ $5.2 for 400k
+      steps [INFERENCE]. Runbook: `docs/training-resources.md`.
 
 ### 3.2 Full run
 
