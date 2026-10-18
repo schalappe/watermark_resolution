@@ -4,56 +4,37 @@ build-backend = "hatchling.build"
 
 [project]
 name = "watermark-resolution"
-version = "0.1.0"
-description = "CNN-based digital image watermarking adaptive to image and watermark resolution"
+version = "0.2.0"
+description = "PyTorch reproduction of a CNN watermarking network adaptive to image and watermark resolution"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "imgaug>=0.4.0,<0.5.0",
-    "loguru>=0.7",
-    "pydot>=3.0,<5",
-    "python-dotenv>=1.0",
-    "requests>=2.32",
-    "rich>=14",
-    "scikit-learn>=1.5,<2",
-    "tensorflow>=2.16,<2.18",
+    "certifi>=2025",
+    "click>=8.2",
+    "kornia>=0.8",
+    "numpy>=2",
+    "pillow>=11",
+    "torch>=2.8",
 ]
 
 [dependency-groups]
 dev = [
-    "black>=25",
-    "isort>=6",
-    "pylint>=3",
-    "radon>=6",
-    "ipywidgets>=8.1",
-    "jupyterlab>=4",
-    "optuna>=4,<5",
-    "optuna-dashboard>=0.20",
-    "tensorflow-metal>=1.2",
+    "pyrefly>=0.40",
+    "pytest>=8",
+    "ruff>=0.13",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/watermark"]
 
-[tool.isort]
-profile = "black"
-
-[tool.black]
+[tool.ruff]
 line-length = 120
-target-version = ['py312']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["RUF001", "RUF002", "RUF003"]  # ×, →, λ follow the paper's notation
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyrefly]
+project-includes = ["src", "tests"]
