@@ -42,6 +42,44 @@ Re-running the same command resumes from `<run>/last.pt`. Each epoch appends los
 make evaluate ARGS="--checkpoint models/storage/dev/last.pt --limit 128"
 ```
 
+## Results
+
+Run `models/storage/paper`: Table 3 settings, full Table 2 attack mix, RTX 3090, stopped at epoch
+2607 / 4000 once training loss, PSNR, and BER were stable (§4.2 "until the loss value is stable").
+Full report: [`docs/report-paper.md`](docs/report-paper.md)
+(`make evaluate ARGS="--checkpoint models/storage/paper/last.pt --limit 1000 --full"`).
+
+| Measurement (evaluation set, 49 images, s = 1) | Measured | Paper | Acceptance |
+|---|---|---|---|
+| PSNR mean / min / max | 40.08 / 36.89 / 41.78 dB | 40.58 / 37.46 / 42.13 dB | ±1.5 dB: pass |
+| BER, no attack | 1.18 % | 0.70 % | < 2 %: pass |
+| BER, Table 4 attacks | see report | per row | trend holds except rotation: fail |
+| PSNR at 64 / 128 / 256 / 512 px | 39.86 / 40.08 / 40.24 / 40.36 dB | 39.97 / 40.58 / 41.23 / 42.35 dB | rises with resolution: pass |
+| Strength s = 0.5 → 2 | PSNR 41.91 → 37.85 dB, BER 3.22 → 0.48 % | both fall | monotonic: pass |
+
+Selected Table 4 rows (BER %, measured / paper):
+
+| Attack | Measured | Paper |
+|---|---|---|
+| Gaussian filter 9×9 | 8.26 | 18.46 |
+| Median filter 5×5 | 8.93 | 10.55 |
+| Gaussian noise σ = 0.08 | 17.41 | 11.99 |
+| JPEG Q = 50 | 3.48 | 8.07 |
+| JPEG Q = 10 | 28.51 | 31.47 |
+| Rotation 15° / 45° / 75° | 51.24 / 50.16 / 50.29 | 2.07 / 5.04 / 1.79 |
+| Crop 0.5 | 17.38 | 14.64 |
+| Dropout 0.5 | 6.57 | 6.25 |
+
+Deviations:
+
+- **Rotation is not learned:** BER ≈ 50 % (chance) at every angle and resolution, against 1.8–5.0 % in
+  the paper. Every other attack is within a few points of the paper, better on filtering and JPEG,
+  worse on noise, salt and pepper, crop, and cropout. Cause not investigated.
+- Training stopped at epoch 2607, not 4000.
+- PSNR rises with resolution much less than in the paper (+0.5 dB from 64 to 512 px vs +2.4 dB).
+- WM2 / WM3 adaptability columns of Table 4 are not reproduced (watermarks not published).
+- Interpretation choices where the paper is silent: [`docs/PLAN.md` §2.3](docs/PLAN.md).
+
 ## Development
 
 ```bash

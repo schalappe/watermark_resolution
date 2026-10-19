@@ -248,11 +248,15 @@ RTX 2080 Ti (§4.2).
 
 ### 3.2 Full run
 
-- [ ] Training length: 4000 epochs (Table 3), or stop once the loss is stable, since the paper trained
+- [x] Training length: 4000 epochs (Table 3), or stop once the loss is stable, since the paper trained
       "until the loss value is stable" (§4.2). The completed epoch count is recorded in the report.
-- [ ] Full training with Table 3 settings.
-- [ ] Evaluation report (2.2) on the final checkpoint.
-- [ ] `README.md` results section: the measured vs paper table, plus the deviations from 2.3.
+      Stopped at **epoch 2607 / 4000** on 2026-10-19 07:28 UTC: from epoch 1124 on, training BER stayed
+      within 7.14–7.39 % and training PSNR within 41.0–41.7 dB (hourly readings); last hour BER −0.02 pt.
+- [x] Full training with Table 3 settings: run `models/storage/paper` (commit `8105a4a`, RTX 3090,
+      torch 2.14.1+cu126), ≈ 21.6 s/epoch, ≈ 16 h.
+- [x] Evaluation report (2.2) on the final checkpoint: [`docs/report-paper.md`](report-paper.md).
+      Rotation BER ≈ 50 % (chance) at every angle: not learned; every other criterion passes.
+- [x] `README.md` results section: the measured vs paper table, plus the deviations from 2.3.
 
 ## Acceptance criteria
 
