@@ -5,7 +5,7 @@ Resolution of Image and Watermark**[^1] (Lee, Seo & Kim, 2020): a blind, invisib
 made of an embedder and an extractor, trained jointly through an attack simulation.
 
 The goal is a faithful reproduction: architecture (§3.2), settings (Table 3), datasets (§4.1), and
-measurements (§4.4). The plan and the measurement log live in [`docs/PLAN.md`](docs/PLAN.md).
+measurements (§4.4).
 
 ## Setup
 
@@ -78,7 +78,8 @@ Deviations:
 - Training stopped at epoch 2607, not 4000.
 - PSNR rises with resolution much less than in the paper (+0.5 dB from 64 to 512 px vs +2.4 dB).
 - WM2 / WM3 adaptability columns of Table 4 are not reproduced (watermarks not published).
-- Interpretation choices where the paper is silent: [`docs/PLAN.md` §2.3](docs/PLAN.md).
+- Interpretation choices where the paper is silent (channel counts, attack value domain, crop/cropout/
+  dropout meaning, weight decay, …) are documented in the code where they apply.
 
 ## Development
 

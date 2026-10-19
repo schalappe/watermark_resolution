@@ -110,7 +110,7 @@ Source: [pricing](https://modal.com/pricing), [timeouts](https://modal.com/docs/
 Source: [efficient GPU usage](https://www.kaggle.com/docs/efficient-gpu-usage),
 [notebooks docs](https://www.kaggle.com/docs/notebooks).
 - GPUs: P100 (docs); T4 ×2 also offered ([announcement](https://www.kaggle.com/product-feedback/361104)).
-  Single-GPU training uses one T4. Both are slower than a 2080 Ti, failing the PLAN criterion.
+  Single-GPU training uses one T4. Both are slower than a 2080 Ti, the minimum speed required.
 - Quota: 30 h/week GPU ("or sometimes higher"); 12 h per session (from the notebooks docs, via search
   snippet). 81–185 h needed → 3–7 weeks of quota and 7–16 manual restarts.
 - Storage: up to 20 GB of output in `/kaggle/working` saved per version; resuming means attaching the
