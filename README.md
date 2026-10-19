@@ -1,128 +1,91 @@
 # Watermarking adaptive to the resolution of image
 
-## Table of Contents
+PyTorch + Kornia reproduction of **Convolutional Neural Network-Based Digital Image Watermarking Adaptive to the
+Resolution of Image and Watermark**[^1] (Lee, Seo & Kim, 2020): a blind, invisible, and robust watermarking network
+made of an embedder and an extractor, trained jointly through an attack simulation.
 
-- [Introduction](#introduction)
-- [Prerequisites](#prerequisites)
-- [Initialize](#initialize)
-- [Dataset](#dataset)
-- [Hyperparameter Search](#hyperparameter-search)
-- [Usage](#usage)
-- [Results](#results)
-- [Reference](#reference)
+The goal is a faithful reproduction: architecture (§3.2), settings (Table 3), datasets (§4.1), and
+measurements (§4.4).
 
----
+## Setup
 
-## Introduction
-
-This code implements the research paper **Convolutional Neural Network-Based Digital Image Watermarking Adaptive
-to the Resolution of Image and Watermark**[^1]. This paper proposes a neural network for performing robust, invisible
-blind watermarking on digital images. This implementation is build with Keras and Tensorflow as backend.
-
-The project aims to implement the neural network proposed in the research paper and includes a script to search for
-optimal hyper-parameters.
-
-Specifically, two neural networks are proposed: one to encode the mark in the image and the other to extract it.
-
-This implementation does not revise the proposed architecture but focuses on finding the hyper-parameters needed to
-train an optimal model.
-
-## Prerequisites
-
-This project uses [uv](https://docs.astral.sh/uv/) for dependency management. Install it first:
+Requires [uv](https://docs.astral.sh/uv/). Runs on Apple Silicon (MPS), CUDA, or CPU.
 
 ```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Or with Homebrew
-brew install uv
-```
-
-## Initialize
-
-To start the project and install the required packages:
-
-```bash
-make initialize
 make sync
 ```
 
-## Dataset
-
-The authors used the BOSS dataset[^2] for their entire experiment. However, for this implementation, the following data
-will be used:
-
-- For training and hyper-parameters
-  search: [Grayscale Image Aesthetic 10K](https://huggingface.co/datasets/ioclab/grayscale_image_aesthetic_10k)
-- For testing: [Grayscale Image Aesthetic 6K](https://huggingface.co/datasets/ioclab/grayscale_image_6k)
-
-To download the necessary data:
+## Data
 
 ```bash
-make get_data
+make data
 ```
 
-### Structure
+Downloads the paper's datasets into `data/`:
 
-```text
-watermark_resolution
-└───data
-│   └───train
-│   └───tests
-└───docs
-│   applsci-10-06854.pdf
-└───models
-    └───params
-    └───storage
-    └───best_params.json
-    └───search_space.json
-└───notebooks
-└───src
-    └───addons
-    └───data
-    └───scripts
-```
+- training: BOSSbase 1.01[^2], 10,000 grayscale 512×512 images (1.67 GB archive), down-sampled to 128×128;
+- evaluation: the 49 standard 512×512 grayscale test images[^3].
 
-## Hyperparameter Search
-
-The process of searching for hyper-parameters involves two steps. Firstly, searching for model-related parameters like
-batch, epochs, optimizer, ...:
+## Training
 
 ```bash
-make search_model
+make train ARGS="--run models/storage/paper"                         # Table 3 settings
+make train ARGS="--run models/storage/dev --limit 128 --batch 64 --epochs 100"   # dev subset
 ```
 
-and secondly, searching for parameters related to the loss function:
+Re-running the same command resumes from `<run>/last.pt`. Each epoch appends losses, PSNR, and BER to
+`<run>/log.csv`.
+
+## Evaluation
 
 ```bash
-make search_loss
+make evaluate ARGS="--checkpoint models/storage/dev/last.pt --limit 128"
 ```
-
-Optuna[^3] is used for all searches.
-
-## Usage
-
-After finding the hyper-parameters, enrich the JSON file `best_params.json`. Optuna Dashboard can be useful for this:
-
-```bash
-make dashboard
-```
-
-To train the networks:
-
-```bash
-make train_model
-```
-
-Models are saved in the `models/storage` directory for future use.
 
 ## Results
 
-The results of the project are available in the associated notebooks.
+Run `models/storage/paper`: Table 3 settings, full Table 2 attack mix, RTX 3090, stopped at epoch
+2607 / 4000 once training loss, PSNR, and BER were stable (§4.2 "until the loss value is stable").
+Full report: [`docs/report-paper.md`](docs/report-paper.md)
+(`make evaluate ARGS="--checkpoint models/storage/paper/last.pt --limit 1000 --full"`).
+
+| Measurement (evaluation set, 49 images, s = 1) | Measured | Paper | Acceptance |
+|---|---|---|---|
+| PSNR mean / min / max | 40.08 / 36.89 / 41.78 dB | 40.58 / 37.46 / 42.13 dB | ±1.5 dB: pass |
+| BER, no attack | 1.18 % | 0.70 % | < 2 %: pass |
+| BER, Table 4 attacks | see report | per row | trend holds except rotation: fail |
+| PSNR at 64 / 128 / 256 / 512 px | 39.86 / 40.08 / 40.24 / 40.36 dB | 39.97 / 40.58 / 41.23 / 42.35 dB | rises with resolution: pass |
+| Strength s = 0.5 → 2 | PSNR 41.91 → 37.85 dB, BER 3.22 → 0.48 % | both fall | monotonic: pass |
+
+Selected Table 4 rows (BER %, measured / paper):
+
+| Attack | Measured | Paper |
+|---|---|---|
+| Gaussian filter 9×9 | 8.26 | 18.46 |
+| Median filter 5×5 | 8.93 | 10.55 |
+| Gaussian noise σ = 0.08 | 17.41 | 11.99 |
+| JPEG Q = 50 | 3.48 | 8.07 |
+| JPEG Q = 10 | 28.51 | 31.47 |
+| Rotation 15° / 45° / 75° | 51.24 / 50.16 / 50.29 | 2.07 / 5.04 / 1.79 |
+| Crop 0.5 | 17.38 | 14.64 |
+| Dropout 0.5 | 6.57 | 6.25 |
+
+Deviations:
+
+- **Rotation is not learned:** BER ≈ 50 % (chance) at every angle and resolution, against 1.8–5.0 % in
+  the paper. Every other attack is within a few points of the paper, better on filtering and JPEG,
+  worse on noise, salt and pepper, crop, and cropout. Cause not investigated.
+- Training stopped at epoch 2607, not 4000.
+- PSNR rises with resolution much less than in the paper (+0.5 dB from 64 to 512 px vs +2.4 dB).
+- WM2 / WM3 adaptability columns of Table 4 are not reproduced (watermarks not published).
+- Interpretation choices where the paper is silent (channel counts, attack value domain, crop/cropout/
+  dropout meaning, weight decay, …) are documented in the code where they apply.
+
+## Development
 
 ```bash
-make notebook
+make test    # pytest
+make check   # ruff format, ruff check, pyrefly
 ```
 
 ## Reference
@@ -132,6 +95,6 @@ Adaptive to the Resolution of Image and Watermark" Applied Sciences 10, no. 19:6
 
 [^1]: https://www.mdpi.com/2076-3417/10/19/6854
 
-[^2]: http://decsai.ugr.es/cvg/CG/base.html
+[^2]: https://dde.binghamton.edu/download/
 
-[^3]: https://optuna.org/
+[^3]: https://ccia.ugr.es/cvg/CG/base.htm
